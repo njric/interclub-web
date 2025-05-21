@@ -53,7 +53,7 @@ async def root():
     return {"message": "Fight Manager API is running"}
 
 # Configure CORS with environment variable
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -186,13 +186,15 @@ async def import_fights(
 def update_subsequent_fights(db: Session, reference_fight: FightDB, start_time: datetime):
     """Update expected start times for all fights after the reference fight"""
     subsequent_fights = db.query(FightDB).filter(
-        FightDB.expected_start > reference_fight.expected_start
+        FightDB.expected_start > reference_fight.expected_start,
+        FightDB.actual_start.is_(None)  # Only update fights that haven't started yet
     ).order_by(FightDB.expected_start).all()
 
     current_time = start_time
     for fight in subsequent_fights:
-        fight.expected_start = current_time
-        current_time += timedelta(minutes=fight.duration + FIGHT_DURATION_BUFFER_MINUTES)
+        if fight.id != reference_fight.id:  # Don't update the reference fight itself
+            fight.expected_start = current_time
+            current_time += timedelta(minutes=fight.duration + FIGHT_DURATION_BUFFER_MINUTES)
 
 @app.post("/fights/{fight_id}/start", response_model=Fight)
 async def start_fight(fight_id: str, db: Session = Depends(get_db)):
@@ -220,8 +222,11 @@ async def start_fight(fight_id: str, db: Session = Depends(get_db)):
         fight.actual_start = current_time
         fight.expected_start = current_time  # Update this fight's expected start
 
+        # Calculate next available start time for subsequent fights
+        next_start = current_time + timedelta(minutes=fight.duration + FIGHT_DURATION_BUFFER_MINUTES)
+
         # Update subsequent fights
-        update_subsequent_fights(db, fight, current_time)
+        update_subsequent_fights(db, fight, next_start)
 
         db.commit()
         return fight
@@ -317,4 +322,61 @@ async def get_ready_fight(db: Session = Depends(get_db)):
         return ready_fight
 
     except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail="Database error occurred")
+
+@app.delete("/fights", response_model=dict)
+async def clear_all_fights(db: Session = Depends(get_db)):
+    """Clear all fights from the database"""
+    try:
+        db.query(FightDB).delete()
+        db.commit()
+        return {"message": "All fights cleared successfully"}
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error occurred")
+
+@app.post("/fights/{fight_id}/cancel", response_model=Fight)
+async def cancel_fight(fight_id: str, db: Session = Depends(get_db)):
+    """Cancel a fight and move it to the end of the schedule"""
+    try:
+        # Get the fight to cancel
+        fight = db.query(FightDB).filter(FightDB.id == fight_id).first()
+        if not fight:
+            raise HTTPException(status_code=404, detail="Fight not found")
+
+        if fight.actual_start:
+            raise HTTPException(status_code=400, detail="Cannot cancel a fight that has already started")
+
+        if fight.is_completed:
+            raise HTTPException(status_code=400, detail="Cannot cancel a completed fight")
+
+        # Find the last scheduled fight
+        last_fight = db.query(FightDB).order_by(FightDB.expected_start.desc()).first()
+
+        # Calculate new start time for the canceled fight
+        if last_fight and last_fight.id != fight_id:
+            new_start = last_fight.expected_start + timedelta(minutes=last_fight.duration + FIGHT_DURATION_BUFFER_MINUTES)
+        else:
+            # If this is the only fight or the last fight, schedule it for now
+            new_start = datetime.now() + timedelta(minutes=FIGHT_DURATION_BUFFER_MINUTES)
+
+        old_start = fight.expected_start
+        fight.expected_start = new_start
+
+        # Update the schedule for fights that were after this one
+        subsequent_fights = db.query(FightDB).filter(
+            FightDB.expected_start > old_start,
+            FightDB.id != fight_id
+        ).order_by(FightDB.expected_start).all()
+
+        current_time = old_start
+        for subsequent_fight in subsequent_fights:
+            subsequent_fight.expected_start = current_time
+            current_time += timedelta(minutes=subsequent_fight.duration + FIGHT_DURATION_BUFFER_MINUTES)
+
+        db.commit()
+        return fight
+
+    except SQLAlchemyError as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail="Database error occurred")

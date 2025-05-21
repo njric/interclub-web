@@ -1,1 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+
+# Node/React
+node_modules/
+fight-manager-admin/node_modules/
+fight-manager-admin/dist/
+fight-manager-admin/.vite/
+fight-manager-admin/build/
+fight-manager-admin/coverage/
+fight-manager-admin/.env.local
+fight-manager-admin/.env.development.local
+fight-manager-admin/.env.test.local
+fight-manager-admin/.env.production.local
+fight-manager-admin/npm-debug.log*
+fight-manager-admin/yarn-debug.log*
+fight-manager-admin/yarn-error.log*
+
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
