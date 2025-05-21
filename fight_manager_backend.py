@@ -48,6 +48,10 @@ def get_db():
 
 app = FastAPI(title="Fight Manager API")
 
+@app.get("/")
+async def root():
+    return {"message": "Fight Manager API is running"}
+
 # Configure CORS with environment variable
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
@@ -179,6 +183,17 @@ async def import_fights(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+def update_subsequent_fights(db: Session, reference_fight: FightDB, start_time: datetime):
+    """Update expected start times for all fights after the reference fight"""
+    subsequent_fights = db.query(FightDB).filter(
+        FightDB.expected_start > reference_fight.expected_start
+    ).order_by(FightDB.expected_start).all()
+
+    current_time = start_time
+    for fight in subsequent_fights:
+        fight.expected_start = current_time
+        current_time += timedelta(minutes=fight.duration + FIGHT_DURATION_BUFFER_MINUTES)
+
 @app.post("/fights/{fight_id}/start", response_model=Fight)
 async def start_fight(fight_id: str, db: Session = Depends(get_db)):
     try:
@@ -201,7 +216,13 @@ async def start_fight(fight_id: str, db: Session = Depends(get_db)):
         if ongoing_fights:
             raise HTTPException(status_code=400, detail="Another fight is in progress")
 
-        fight.actual_start = datetime.now()
+        current_time = datetime.now()
+        fight.actual_start = current_time
+        fight.expected_start = current_time  # Update this fight's expected start
+
+        # Update subsequent fights
+        update_subsequent_fights(db, fight, current_time)
+
         db.commit()
         return fight
 
@@ -222,11 +243,78 @@ async def end_fight(fight_id: str, db: Session = Depends(get_db)):
         if fight.actual_end:
             raise HTTPException(status_code=400, detail="Fight already ended")
 
-        fight.actual_end = datetime.now()
+        current_time = datetime.now()
+        fight.actual_end = current_time
         fight.is_completed = True
+
+        # Calculate start time for next fights based on actual end time
+        next_start = current_time + timedelta(minutes=FIGHT_DURATION_BUFFER_MINUTES)
+
+        # Update subsequent fights
+        update_subsequent_fights(db, fight, next_start)
+
         db.commit()
         return fight
 
     except SQLAlchemyError as e:
         db.rollback()
+        raise HTTPException(status_code=500, detail="Database error occurred")
+
+@app.post("/fights/{fight_id}/reset", response_model=Fight)
+async def reset_fight(fight_id: str, db: Session = Depends(get_db)):
+    try:
+        fight = db.query(FightDB).filter(FightDB.id == fight_id).first()
+        if not fight:
+            raise HTTPException(status_code=404, detail="Fight not found")
+
+        fight.actual_start = None
+        fight.actual_end = None
+        fight.is_completed = False
+        db.commit()
+        return fight
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error occurred")
+
+@app.get("/fights/ongoing", response_model=Optional[Fight])
+async def get_ongoing_fight(db: Session = Depends(get_db)):
+    """Get the currently ongoing fight"""
+    try:
+        ongoing_fight = db.query(FightDB).filter(
+            FightDB.actual_start.isnot(None),
+            FightDB.actual_end.is_(None)
+        ).first()
+
+        return ongoing_fight
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail="Database error occurred")
+
+@app.get("/fights/ready", response_model=Optional[Fight])
+async def get_ready_fight(db: Session = Depends(get_db)):
+    """Get the next fight that should be preparing"""
+    try:
+        # First get the ongoing fight
+        ongoing_fight = db.query(FightDB).filter(
+            FightDB.actual_start.isnot(None),
+            FightDB.actual_end.is_(None)
+        ).first()
+
+        if ongoing_fight:
+            # Get the next non-completed fight after the ongoing one
+            ready_fight = db.query(FightDB).filter(
+                FightDB.expected_start > ongoing_fight.expected_start,
+                FightDB.is_completed == False
+            ).order_by(FightDB.expected_start).first()
+        else:
+            # If no ongoing fight, get the next non-completed fight
+            ready_fight = db.query(FightDB).filter(
+                FightDB.is_completed == False,
+                FightDB.actual_start.is_(None)
+            ).order_by(FightDB.expected_start).first()
+
+        return ready_fight
+
+    except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail="Database error occurred")
