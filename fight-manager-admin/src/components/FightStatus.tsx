@@ -1,76 +1,76 @@
-import React, { useEffect, useState } from 'react';
-import { Paper, Typography, Box } from '@mui/material';
-import type { Fight } from '../services/api';
-import api from '../services/api';
+import React from 'react';
+import { Paper, Typography, Box, Stack, Chip } from '@mui/material';
+import { useFightContext } from '../context/FightContext';
 
 const FightStatus: React.FC = () => {
-  const [ongoingFight, setOngoingFight] = useState<Fight | null>(null);
-  const [readyFight, setReadyFight] = useState<Fight | null>(null);
+  const { ongoingFight, readyFight } = useFightContext();
 
-  const loadStatus = async () => {
-    try {
-      const [ongoing, ready] = await Promise.all([
-        api.getOngoingFight(),
-        api.getReadyFight(),
-      ]);
-      setOngoingFight(ongoing);
-      setReadyFight(ready);
-    } catch (error) {
-      console.error('Error loading fight status:', error);
-    }
+  const formatTime = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
   };
 
-  useEffect(() => {
-    loadStatus();
-    // Refresh every 10 seconds
-    const interval = setInterval(loadStatus, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const FightCard: React.FC<{ title: string; fight: Fight | null }> = ({
-    title,
-    fight,
-  }) => (
-    <Paper
-      elevation={3}
-      sx={{
-        p: 2,
-        m: 2,
-        backgroundColor: title === 'ONGOING' ? '#e3f2fd' : '#f3e5f5',
-      }}
-    >
-      <Typography variant="h6" gutterBottom>
-        {title}
-      </Typography>
-      {fight ? (
-        <>
-          <Typography variant="body1">
-            <strong>Fighters:</strong> {fight.fighter_a} vs {fight.fighter_b}
-          </Typography>
-          <Typography variant="body2">
-            <strong>Duration:</strong> {fight.duration} minutes
-          </Typography>
-          <Typography variant="body2">
-            <strong>Expected Start:</strong>{' '}
-            {new Date(fight.expected_start).toLocaleString()}
-          </Typography>
-        </>
-      ) : (
-        <Typography variant="body1">No fight {title.toLowerCase()}</Typography>
-      )}
-    </Paper>
-  );
-
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Fight Status
-      </Typography>
-      <Box display="flex" justifyContent="center">
-        <FightCard title="ONGOING" fight={ongoingFight} />
-        <FightCard title="READY" fight={readyFight} />
-      </Box>
-    </Box>
+    <Stack spacing={2}>
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Ongoing Fight
+        </Typography>
+        {ongoingFight ? (
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+              <Typography variant="body1">
+                {ongoingFight.fighter_a} vs {ongoingFight.fighter_b}
+              </Typography>
+              <Chip
+                label={`${ongoingFight.weight_class}kg`}
+                size="small"
+                color="primary"
+              />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              Started at {formatTime(ongoingFight.actual_start)}
+            </Typography>
+          </Box>
+        ) : (
+          <Typography variant="body1" color="text.secondary">
+            No fight in progress
+          </Typography>
+        )}
+      </Paper>
+
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Ready Fight
+        </Typography>
+        {readyFight ? (
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+              <Typography variant="body1">
+                {readyFight.fighter_a} vs {readyFight.fighter_b}
+              </Typography>
+              <Chip
+                label={`${readyFight.weight_class}kg`}
+                size="small"
+                color="secondary"
+              />
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              Expected start: {formatTime(readyFight.expected_start)}
+            </Typography>
+          </Box>
+        ) : (
+          <Typography variant="body1" color="text.secondary">
+            No fight ready
+          </Typography>
+        )}
+      </Paper>
+    </Stack>
   );
 };
 

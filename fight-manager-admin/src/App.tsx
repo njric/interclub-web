@@ -1,8 +1,12 @@
+import React, { useState } from 'react';
 import { Container, CssBaseline, AppBar, Toolbar, Typography, Tabs, Tab, Box } from '@mui/material';
-import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import FightList from './components/FightList';
 import FightStatus from './components/FightStatus';
 import ImportFights from './components/ImportFights';
+import UserInterface from './components/user/UserInterface';
+import { FightProvider } from './context/FightContext';
+import './App.css';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -25,7 +29,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-function App() {
+function AdminPanel() {
   const [currentTab, setCurrentTab] = useState(0);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -34,7 +38,6 @@ function App() {
 
   return (
     <>
-      <CssBaseline />
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6">Fight Manager Admin</Typography>
@@ -47,8 +50,12 @@ function App() {
         </Tabs>
 
         <TabPanel value={currentTab} index={0}>
-          <FightStatus />
-          <FightList />
+          <Box sx={{ my: 4 }}>
+            <FightStatus />
+            <Box sx={{ mt: 4 }}>
+              <FightList />
+            </Box>
+          </Box>
         </TabPanel>
 
         <TabPanel value={currentTab} index={1}>
@@ -56,6 +63,21 @@ function App() {
         </TabPanel>
       </Container>
     </>
+  );
+}
+
+function App() {
+  return (
+    <FightProvider>
+      <CssBaseline />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/" element={<UserInterface />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </FightProvider>
   );
 }
 

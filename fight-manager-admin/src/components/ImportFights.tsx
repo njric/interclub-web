@@ -19,9 +19,12 @@ const ImportFights: React.FC = () => {
       });
     } catch (error: any) {
       console.error('Import error:', error);
+      const errorDetail = error.response?.data?.detail;
+      const errorStatus = error.response?.status;
+      const errorMessage = error.message;
       setMessage({
         type: 'error',
-        text: error.response?.data?.detail || 'Error importing fights. Please check your CSV format.',
+        text: `Error importing fights (${errorStatus}): ${errorDetail || errorMessage || 'Unknown error'}. Please check your CSV format and try again.`,
       });
     }
 
@@ -39,9 +42,12 @@ const ImportFights: React.FC = () => {
         });
       } catch (error: any) {
         console.error('Clear error:', error);
+        const errorDetail = error.response?.data?.detail;
+        const errorStatus = error.response?.status;
+        const errorMessage = error.message;
         setMessage({
           type: 'error',
-          text: error.response?.data?.detail || 'Error clearing fights',
+          text: `Error clearing fights (${errorStatus}): ${errorDetail || errorMessage || 'Unknown error'}`,
         });
       }
     }
@@ -62,15 +68,26 @@ const ImportFights: React.FC = () => {
             Upload a CSV file with the following columns:
           </Typography>
           <Typography variant="body2" component="pre" sx={{ backgroundColor: '#f5f5f5', p: 1 }}>
-            fighter_a,fighter_b,duration
+            fighter_a,fighter_a_club,fighter_b,fighter_b_club,weight_class,duration
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
             Example:
           </Typography>
           <Typography variant="body2" component="pre" sx={{ backgroundColor: '#f5f5f5', p: 1 }}>
-            John Doe,Jane Smith,15
-            Mike Johnson,Sarah Wilson,20
+            Buakaw,Por Pramuk,Masato,K-1,76,15
+            Saenchai,13 Coins,Pakorn,Por Pramuk,65,15
           </Typography>
+          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+            Notes:
+          </Typography>
+          <ul>
+            <Typography variant="body2" component="li">
+              weight_class: Integer representing the weight category in kg (e.g., 76 for 76kg)
+            </Typography>
+            <Typography variant="body2" component="li">
+              duration: Fight duration in minutes
+            </Typography>
+          </ul>
         </Box>
         <Stack direction="row" spacing={2}>
           <Button variant="contained" component="label">

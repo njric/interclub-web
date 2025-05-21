@@ -7,8 +7,12 @@ axios.defaults.headers.common['Accept'] = 'application/json';
 
 export interface Fight {
   id: string;
+  fight_number: number;
   fighter_a: string;
+  fighter_a_club: string;
   fighter_b: string;
+  fighter_b_club: string;
+  weight_class: number;
   duration: number;
   expected_start: string;
   actual_start: string | null;
@@ -32,6 +36,18 @@ const api = {
   // Get ready fight
   getReadyFight: async (): Promise<Fight | null> => {
     const response = await axios.get(`${API_URL}/fights/ready`);
+    return response.data;
+  },
+
+  // Get next fights
+  getNextFights: async (limit: number = 5): Promise<Fight[]> => {
+    const response = await axios.get(`${API_URL}/fights/next?limit=${limit}`);
+    return response.data;
+  },
+
+  // Get past fights
+  getPastFights: async (limit: number = 10): Promise<Fight[]> => {
+    const response = await axios.get(`${API_URL}/fights/past?limit=${limit}`);
     return response.data;
   },
 
@@ -80,6 +96,12 @@ const api = {
   // Cancel a fight (move to end of schedule)
   cancelFight: async (fightId: string): Promise<Fight> => {
     const response = await axios.post(`${API_URL}/fights/${fightId}/cancel`);
+    return response.data;
+  },
+
+  // Update fight number
+  updateFightNumber: async (fightId: string, newNumber: number): Promise<Fight[]> => {
+    const response = await axios.patch(`${API_URL}/fights/${fightId}/number/${newNumber}`);
     return response.data;
   },
 };

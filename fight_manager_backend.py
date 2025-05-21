@@ -1,17 +1,18 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime, timedelta
 import csv
 import io
 import uuid
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, Boolean
+from sqlalchemy import create_engine, Column, String, Integer, DateTime, Boolean, Float, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 import os
 from dotenv import load_dotenv
+import enum
 
 # Load environment variables
 load_dotenv()
@@ -27,8 +28,12 @@ class FightDB(Base):
     __tablename__ = "fights"
 
     id = Column(String, primary_key=True, index=True)
+    fight_number = Column(Integer, nullable=False)
     fighter_a = Column(String, nullable=False)
+    fighter_a_club = Column(String, nullable=False)
     fighter_b = Column(String, nullable=False)
+    fighter_b_club = Column(String, nullable=False)
+    weight_class = Column(Integer, nullable=False)
     duration = Column(Integer, nullable=False)
     expected_start = Column(DateTime, nullable=False)
     actual_start = Column(DateTime, nullable=True)
@@ -36,7 +41,12 @@ class FightDB(Base):
     is_completed = Column(Boolean, default=False)
 
 # Create tables
-Base.metadata.create_all(bind=engine)
+def recreate_tables():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+# Create tables on startup
+recreate_tables()
 
 # Dependency to get database session
 def get_db():
@@ -82,8 +92,12 @@ class FightUpdate(BaseModel):
 
 class Fight(BaseModel):
     id: str
+    fight_number: int
     fighter_a: str
+    fighter_a_club: str
     fighter_b: str
+    fighter_b_club: str
+    weight_class: int
     duration: int
     expected_start: datetime
     actual_start: Optional[datetime] = None
@@ -99,10 +113,35 @@ class Fight(BaseModel):
             raise ValueError(f"Duration must be between 1 and {MAX_DURATION_MINUTES} minutes")
         return v
 
+    @field_validator('weight_class')
+    def validate_weight_class(cls, v):
+        if v <= 0:
+            raise ValueError("Weight class must be positive")
+        return v
+
+def get_weight_class(weight: float) -> str:
+    """Calculate weight class based on weight in kg"""
+    weight_classes = [
+        (52.2, "Flyweight"),
+        (56.7, "Bantamweight"),
+        (61.2, "Featherweight"),
+        (65.8, "Lightweight"),
+        (70.3, "Welterweight"),
+        (77.1, "Middleweight"),
+        (83.9, "Light Heavyweight"),
+        (float('inf'), "Heavyweight")
+    ]
+
+    for limit, class_name in weight_classes:
+        if weight <= limit:
+            return class_name
+    return "Heavyweight"
+
 @app.get("/fights", response_model=List[Fight])
 async def list_fights(db: Session = Depends(get_db)):
     try:
-        return db.query(FightDB).order_by(FightDB.expected_start).all()
+        fights = db.query(FightDB).order_by(FightDB.expected_start).all()
+        return fights
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail="Database error occurred")
 
@@ -127,11 +166,32 @@ async def update_fight(fight_id: str, update: FightUpdate, db: Session = Depends
         db.rollback()
         raise HTTPException(status_code=500, detail="Database error occurred")
 
+@app.patch("/fights/reorder", response_model=List[Fight])
+async def reorder_fights(fight_orders: List[dict], db: Session = Depends(get_db)):
+    """Update the order of fights"""
+    try:
+        for order in fight_orders:
+            fight = db.query(FightDB).filter(FightDB.id == order["id"]).first()
+            if fight:
+                fight.fight_number = order["fight_number"]
+
+        # Recalculate expected start times based on new order
+        all_fights = db.query(FightDB).order_by(FightDB.fight_number).all()
+        current_time = datetime.now()
+
+        for fight in all_fights:
+            if not fight.actual_start:  # Only update non-started fights
+                fight.expected_start = current_time
+                current_time += timedelta(minutes=fight.duration + FIGHT_DURATION_BUFFER_MINUTES)
+
+        db.commit()
+        return all_fights
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Database error occurred")
+
 @app.post("/fights/import")
-async def import_fights(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
+async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
 
@@ -141,45 +201,79 @@ async def import_fights(
         reader = csv.DictReader(io.StringIO(decoded))
 
         # Validate CSV structure
-        required_fields = {"fighter_a", "fighter_b", "duration"}
+        required_fields = {
+            "fighter_a", "fighter_a_club",
+            "fighter_b", "fighter_b_club",
+            "weight_class", "duration"
+        }
         if not all(field in reader.fieldnames for field in required_fields):
+            missing_fields = required_fields - set(reader.fieldnames or [])
             raise HTTPException(
                 status_code=400,
-                detail=f"CSV must contain fields: {', '.join(required_fields)}"
+                detail=f"Missing required fields: {', '.join(missing_fields)}. Required fields are: {', '.join(required_fields)}"
             )
 
         # Clear existing fights that haven't started
-        db.query(FightDB).filter(FightDB.actual_start.is_(None)).delete()
+        try:
+            db.query(FightDB).filter(FightDB.actual_start.is_(None)).delete()
+        except SQLAlchemyError as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Database error during delete: {str(e)}")
 
         start_time = datetime.now()
         imported_count = 0
 
+        # Get the highest fight number
+        try:
+            last_fight = db.query(FightDB).order_by(FightDB.fight_number.desc()).first()
+            next_fight_number = (last_fight.fight_number + 1) if last_fight else 1
+        except SQLAlchemyError as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Database error getting fight number: {str(e)}")
+
         for row in reader:
             try:
                 duration = int(row["duration"])
+                weight_class = int(row["weight_class"])
+
                 if duration <= 0 or duration > MAX_DURATION_MINUTES:
-                    continue  # Skip invalid durations
+                    continue
+
+                if weight_class <= 0:
+                    continue
 
                 fight = FightDB(
                     id=str(uuid.uuid4()),
+                    fight_number=next_fight_number,
                     fighter_a=row["fighter_a"].strip(),
+                    fighter_a_club=row["fighter_a_club"].strip(),
                     fighter_b=row["fighter_b"].strip(),
+                    fighter_b_club=row["fighter_b_club"].strip(),
+                    weight_class=weight_class,
                     duration=duration,
                     expected_start=start_time,
                     is_completed=False
                 )
                 db.add(fight)
                 imported_count += 1
+                next_fight_number += 1
                 start_time += timedelta(minutes=duration + FIGHT_DURATION_BUFFER_MINUTES)
-            except ValueError:
-                continue  # Skip rows with invalid data
+            except (ValueError, KeyError) as e:
+                continue
+            except SQLAlchemyError as e:
+                db.rollback()
+                raise HTTPException(status_code=500, detail=f"Database error adding fight: {str(e)}")
 
-        db.commit()
-        return {"imported": imported_count}
+        try:
+            db.commit()
+            return {"imported": imported_count}
+        except SQLAlchemyError as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Database error during commit: {str(e)}")
 
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Database error occurred")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -379,4 +473,111 @@ async def cancel_fight(fight_id: str, db: Session = Depends(get_db)):
 
     except SQLAlchemyError as e:
         db.rollback()
+        raise HTTPException(status_code=500, detail="Database error occurred")
+
+@app.patch("/fights/{fight_id}/number/{new_number}", response_model=List[Fight])
+async def update_fight_number(fight_id: str, new_number: int, db: Session = Depends(get_db)):
+    """Update a fight's number and reorder other fights accordingly"""
+    try:
+        # Start a transaction
+        db.begin()
+
+        # Get all non-started fights in a single query, ordered by fight number
+        fights = db.query(FightDB).filter(
+            FightDB.actual_start.is_(None)
+        ).order_by(FightDB.fight_number).all()
+
+        # Find the fight to update and validate
+        fight_to_update = next((f for f in fights if f.id == fight_id), None)
+        if not fight_to_update:
+            db.rollback()
+            raise HTTPException(status_code=404, detail="Fight not found")
+
+        if fight_to_update.actual_start:
+            db.rollback()
+            raise HTTPException(status_code=400, detail="Cannot reorder a fight that has already started")
+
+        # Validate the new number
+        total_fights = len(fights)
+        if new_number < 1 or new_number > total_fights:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=f"Fight number must be between 1 and {total_fights}")
+
+        old_number = fight_to_update.fight_number
+
+        # Skip if no change
+        if new_number == old_number:
+            db.rollback()
+            return db.query(FightDB).order_by(FightDB.fight_number).all()
+
+        # Update fight numbers in memory first
+        if new_number > old_number:
+            # Moving fight later in the order
+            for fight in fights:
+                if old_number < fight.fight_number <= new_number:
+                    fight.fight_number -= 1
+        else:
+            # Moving fight earlier in the order
+            for fight in fights:
+                if new_number <= fight.fight_number < old_number:
+                    fight.fight_number += 1
+
+        fight_to_update.fight_number = new_number
+
+        # Update expected start times
+        current_time = datetime.now()
+        for fight in sorted(fights, key=lambda x: x.fight_number):
+            if not fight.actual_start:  # Only update non-started fights
+                fight.expected_start = current_time
+                current_time += timedelta(minutes=fight.duration + FIGHT_DURATION_BUFFER_MINUTES)
+
+        # Commit all changes in a single transaction
+        db.commit()
+
+        # Return all fights in their new order
+        return db.query(FightDB).order_by(FightDB.fight_number).all()
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.get("/fights/next", response_model=List[Fight])
+async def get_next_fights(limit: int = 5, db: Session = Depends(get_db)):
+    """Get the upcoming fights that haven't started yet"""
+    try:
+        # Get the ongoing fight first to use its expected_start as reference
+        ongoing_fight = db.query(FightDB).filter(
+            FightDB.actual_start.isnot(None),
+            FightDB.actual_end.is_(None)
+        ).first()
+
+        if ongoing_fight:
+            # Get fights after the ongoing one
+            next_fights = db.query(FightDB).filter(
+                FightDB.expected_start > ongoing_fight.expected_start,
+                FightDB.is_completed == False
+            ).order_by(FightDB.expected_start).limit(limit).all()
+        else:
+            # If no ongoing fight, get the next non-completed fights
+            next_fights = db.query(FightDB).filter(
+                FightDB.is_completed == False,
+                FightDB.actual_start.is_(None)
+            ).order_by(FightDB.expected_start).limit(limit).all()
+
+        return next_fights
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail="Database error occurred")
+
+@app.get("/fights/past", response_model=List[Fight])
+async def get_past_fights(limit: int = 10, db: Session = Depends(get_db)):
+    """Get the completed fights"""
+    try:
+        past_fights = db.query(FightDB).filter(
+            FightDB.is_completed == True
+        ).order_by(FightDB.actual_end.desc()).limit(limit).all()
+
+        return past_fights
+
+    except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail="Database error occurred")
