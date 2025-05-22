@@ -119,6 +119,9 @@ class Fight(BaseModel):
             raise ValueError("Weight class must be positive")
         return v
 
+class StartTimeUpdate(BaseModel):
+    start_time: str
+
 def get_weight_class(weight: float) -> str:
     """Calculate weight class based on weight in kg"""
     weight_classes = [
@@ -581,3 +584,51 @@ async def get_past_fights(limit: int = 10, db: Session = Depends(get_db)):
 
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail="Database error occurred")
+
+def update_fight_times(db: Session, start_time: datetime):
+    """Update expected start times for all fights based on a new start time."""
+    try:
+        # Get all fights ordered by fight number
+        fights = db.query(FightDB).order_by(FightDB.fight_number).all()
+        if not fights:
+            return
+
+        current_time = start_time
+        for fight in fights:
+            if not fight.actual_start:  # Only update non-started fights
+                fight.expected_start = current_time
+                current_time += timedelta(minutes=fight.duration + FIGHT_DURATION_BUFFER_MINUTES)
+
+        db.commit()
+        return fights
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.post("/fights/start-time")
+async def set_start_time(start_time: StartTimeUpdate, db: Session = Depends(get_db)):
+    """Set the start time for all fights."""
+    try:
+        # Parse the time string (HH:mm:ss) and combine with today's date
+        time_parts = [int(x) for x in start_time.start_time.split(':')]
+        if len(time_parts) < 2:
+            raise ValueError("Invalid time format")
+
+        now = datetime.now()
+        new_start_time = now.replace(
+            hour=time_parts[0],
+            minute=time_parts[1],
+            second=time_parts[2] if len(time_parts) > 2 else 0,
+            microsecond=0
+        )
+
+        # Update all fight times
+        updated_fights = update_fight_times(db, new_start_time)
+        if not updated_fights:
+            return {"message": "No fights to update"}
+
+        return {"message": "Start time updated successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid time format: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating start time: {str(e)}")

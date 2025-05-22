@@ -220,9 +220,10 @@ const FightList: React.FC = () => {
 
   const formatTime = (time: string | undefined | null): string => {
     if (!time) return '-';
-    return new Date(time).toLocaleTimeString('en-US', {
+    return new Date(time).toLocaleTimeString('en-GB', {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false
     });
   };
 

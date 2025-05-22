@@ -120,18 +120,37 @@ const ImportFights: React.FC = () => {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [addFightOpen, setAddFightOpen] = useState(false);
   const [totalFights, setTotalFights] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Fetch current start time and fights
   React.useEffect(() => {
-    // Get total number of fights for the add fight dialog
-    const fetchTotalFights = async () => {
+    const fetchData = async () => {
       try {
+        setIsLoading(true);
         const fights = await api.getFights();
         setTotalFights(fights.length);
+
+        // Find the first non-started fight and set its expected start time
+        const firstUnstartedFight = fights
+          .sort((a, b) => a.fight_number - b.fight_number)
+          .find(fight => !fight.actual_start);
+
+        if (firstUnstartedFight?.expected_start) {
+          // Parse the expected_start datetime string
+          const startTime = new Date(firstUnstartedFight.expected_start);
+          setStartTime(startTime);
+        }
       } catch (error) {
         console.error('Error fetching fights:', error);
+        setMessage({
+          type: 'error',
+          text: 'Error loading current start time'
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchTotalFights();
+    fetchData();
   }, []);
 
   const handleSetStartTime = async () => {
@@ -144,17 +163,30 @@ const ImportFights: React.FC = () => {
     }
 
     try {
-      const timeString = startTime.toLocaleTimeString('en-US', { hour12: false });
-      await api.setStartTime(timeString);
+      // Format time as HH:mm:ss
+      const hours = startTime.getHours().toString().padStart(2, '0');
+      const minutes = startTime.getMinutes().toString().padStart(2, '0');
+      const timeString = `${hours}:${minutes}:00`;
+
+      console.log('Sending time to backend:', timeString);
+
+      const response = await api.setStartTime(timeString);
+      console.log('Backend response:', response);
+
       setMessage({
         type: 'success',
-        text: 'Start time set successfully',
+        text: 'Start time set successfully. Refreshing page to show updated times...',
       });
+
+      // Give the user a chance to see the success message before reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error: any) {
       console.error('Error setting start time:', error);
       setMessage({
         type: 'error',
-        text: `Error setting start time: ${error.message}`,
+        text: `Error setting start time: ${error.response?.data?.detail || error.message}`,
       });
     }
   };
@@ -222,16 +254,32 @@ const ImportFights: React.FC = () => {
                 label="First Fight Start Time"
                 value={startTime}
                 onChange={(newValue) => setStartTime(newValue)}
+                ampm={false}
+                views={['hours', 'minutes']}
+                format="HH:mm"
               />
               <Button
                 variant="contained"
                 onClick={handleSetStartTime}
-                disabled={!startTime}
+                disabled={!startTime || isLoading}
               >
                 Set Start Time
               </Button>
             </Stack>
           </LocalizationProvider>
+          {isLoading ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Loading current start time...
+            </Typography>
+          ) : startTime && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Current start time: {startTime.toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              })}
+            </Typography>
+          )}
         </Box>
       </Paper>
 
