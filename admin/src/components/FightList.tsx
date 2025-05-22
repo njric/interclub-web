@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  DialogContentText,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import type { Fight, FightCreate } from '../services/api';
@@ -114,12 +115,42 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ open, fight, onClose,
   );
 };
 
+interface CancelFightDialogProps {
+  open: boolean;
+  fight: Fight | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+const CancelFightDialog: React.FC<CancelFightDialogProps> = ({ open, fight, onClose, onConfirm }) => {
+  if (!fight) return null;
+
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Cancel Fight</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          Are you sure you want to cancel the fight between {fight.fighter_a} ({fight.fighter_a_club}) and {fight.fighter_b} ({fight.fighter_b_club})?
+          This action cannot be undone.
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>No, Keep Fight</Button>
+        <Button onClick={onConfirm} color="error" variant="contained">
+          Yes, Cancel Fight
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const FightList: React.FC = () => {
   const [fights, setFights] = useState<Fight[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [editFight, setEditFight] = useState<Fight | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [movedFightId, setMovedFightId] = useState<string | null>(null);
+  const [cancelFight, setCancelFight] = useState<Fight | null>(null);
   const { refreshFightStatus } = useFightContext();
 
   // Configuration options
@@ -191,16 +222,22 @@ const FightList: React.FC = () => {
     }
   };
 
-  const handleCancel = async (fightId: string) => {
-    if (window.confirm('Are you sure you want to cancel this fight?')) {
-      try {
-        await api.cancelFight(fightId);
-        await loadFights();
-        await refreshFightStatus(); // Refresh fight status after canceling a fight
-      } catch (error) {
-        console.error('Error canceling fight:', error);
-        setError('Error canceling fight. Please try again.');
-      }
+  const handleCancelClick = (fight: Fight) => {
+    setCancelFight(fight);
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!cancelFight) return;
+
+    try {
+      await api.cancelFight(cancelFight.id);
+      await loadFights();
+      await refreshFightStatus();
+      setCancelFight(null);
+    } catch (error: any) {
+      console.error('Error canceling fight:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Error canceling fight. Please try again.';
+      setError(`Failed to cancel fight: ${errorMessage}`);
     }
   };
 
@@ -214,7 +251,8 @@ const FightList: React.FC = () => {
       setError(null);
     } catch (error: any) {
       console.error('Error updating fight:', error);
-      setError(error.response?.data?.detail || 'Error updating fight. Please try again.');
+      const errorMessage = error.response?.data?.detail || error.message || 'Error updating fight. Please try again.';
+      setError(errorMessage);
     }
   };
 
@@ -318,7 +356,7 @@ const FightList: React.FC = () => {
                           variant="outlined"
                           color="error"
                           size="small"
-                          onClick={() => handleCancel(fight.id)}
+                          onClick={() => handleCancelClick(fight)}
                         >
                           Cancel
                         </Button>
@@ -347,6 +385,13 @@ const FightList: React.FC = () => {
         fight={editFight}
         onClose={() => setEditFight(null)}
         onSave={handleEditFight}
+      />
+
+      <CancelFightDialog
+        open={!!cancelFight}
+        fight={cancelFight}
+        onClose={() => setCancelFight(null)}
+        onConfirm={handleCancelConfirm}
       />
 
       <Snackbar

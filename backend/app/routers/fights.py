@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 import csv
 import io
@@ -15,13 +15,9 @@ from ..schemas.fight import (
     StartTimeUpdate
 )
 from ..utils.time import update_fight_times, update_subsequent_fights
-from ..utils.auth import get_current_active_user, get_current_admin_user, require_auth, verify_token
-from ..models.user import User
+from ..utils.auth import verify_token
 
-router = APIRouter(
-    prefix="/fights",
-    tags=["fights"]
-)
+router = APIRouter(prefix="/fights", tags=["fights"])
 
 @router.get("/", response_model=List[FightSchema])
 async def list_fights(db: Session = Depends(get_db)):
@@ -32,11 +28,7 @@ async def list_fights(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/import")
-async def import_fights(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    _: dict = Depends(verify_token)
-):
+async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
 
@@ -50,12 +42,8 @@ async def import_fights(
             "fighter_b", "fighter_b_club",
             "weight_class", "duration"
         }
-
-        if not reader.fieldnames:
-            raise HTTPException(status_code=400, detail="CSV file is empty or malformed")
-
         if not all(field in reader.fieldnames for field in required_fields):
-            missing_fields = required_fields - set(reader.fieldnames)
+            missing_fields = required_fields - set(reader.fieldnames or [])
             raise HTTPException(
                 status_code=400,
                 detail=f"Missing required fields: {', '.join(missing_fields)}"
@@ -98,8 +86,7 @@ async def import_fights(
                 imported_count += 1
                 next_fight_number += 1
                 start_time += timedelta(minutes=duration + 2)  # FIGHT_DURATION_BUFFER_MINUTES
-            except (ValueError, KeyError) as e:
-                print(f"Error processing row: {e}")
+            except (ValueError, KeyError):
                 continue
 
         db.commit()
@@ -107,15 +94,10 @@ async def import_fights(
 
     except Exception as e:
         db.rollback()
-        print(f"Import error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/start-time")
-async def set_start_time(
-    start_time: StartTimeUpdate,
-    db: Session = Depends(get_db),
-    _: dict = Depends(verify_token)
-):
+async def set_start_time(start_time: StartTimeUpdate, db: Session = Depends(get_db)):
     """Set the start time for all fights."""
     try:
         # Parse the time string (HH:mm:ss) and combine with today's date
@@ -142,12 +124,8 @@ async def set_start_time(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating start time: {str(e)}")
 
-@router.post("/{fight_id}/start")
-async def start_fight(
-    fight_id: str,
-    db: Session = Depends(get_db),
-    _: dict = Depends(verify_token)
-):
+@router.post("/{fight_id}/start", response_model=FightSchema)
+async def start_fight(fight_id: str, db: Session = Depends(get_db)):
     try:
         fight = db.query(Fight).filter(Fight.id == fight_id).first()
         if not fight:
@@ -185,12 +163,8 @@ async def start_fight(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/{fight_id}/end")
-async def end_fight(
-    fight_id: str,
-    db: Session = Depends(get_db),
-    _: dict = Depends(verify_token)
-):
+@router.post("/{fight_id}/end", response_model=FightSchema)
+async def end_fight(fight_id: str, db: Session = Depends(get_db)):
     try:
         fight = db.query(Fight).filter(Fight.id == fight_id).first()
         if not fight:
@@ -261,182 +235,73 @@ async def get_ready_fight(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/")
-async def clear_all_fights(
-    db: Session = Depends(get_db),
-    _: dict = Depends(verify_token)
-):
+@router.delete("/", response_model=dict)
+async def clear_all_fights(db: Session = Depends(get_db)):
+    """Clear all fights from the database"""
     try:
         db.query(Fight).delete()
         db.commit()
-        return {"message": "All fights cleared"}
+        return {"message": "All fights cleared successfully"}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/add")
-async def add_fight(
-    fight: FightCreate,
-    db: Session = Depends(get_db),
-    _: dict = Depends(verify_token)
-):
-    try:
-        # Get the highest fight number
-        last_fight = db.query(Fight).order_by(Fight.fight_number.desc()).first()
-        next_fight_number = (last_fight.fight_number + 1) if last_fight else 1
-
-        # Get current start time from last fight or use current time
-        current_time = datetime.now()
-        if last_fight and last_fight.expected_start:
-            # If there's a last fight, set start time after it
-            last_fight_end = last_fight.expected_start + timedelta(minutes=last_fight.duration + 2)
-            current_time = max(current_time, last_fight_end)
-
-        # Create new fight
-        new_fight = Fight(
-            id=str(uuid.uuid4()),
-            fight_number=next_fight_number,
-            fighter_a=fight.fighter_a,
-            fighter_a_club=fight.fighter_a_club,
-            fighter_b=fight.fighter_b,
-            fighter_b_club=fight.fighter_b_club,
-            weight_class=fight.weight_class,
-            duration=fight.duration,
-            expected_start=current_time,
-            is_completed=False
-        )
-
-        # If position is specified, adjust fight numbers
-        if fight.position is not None:
-            # Validate position
-            if fight.position < 1:
-                raise HTTPException(status_code=400, detail="Position must be positive")
-
-            # Get all fights ordered by fight number
-            fights = db.query(Fight).order_by(Fight.fight_number).all()
-
-            if fight.position > len(fights) + 1:
-                new_fight.fight_number = len(fights) + 1
-            else:
-                # Shift fight numbers for all fights at and after the position
-                for existing_fight in fights:
-                    if existing_fight.fight_number >= fight.position:
-                        existing_fight.fight_number += 1
-                new_fight.fight_number = fight.position
-
-        db.add(new_fight)
-        db.commit()
-        db.refresh(new_fight)
-
-        # Update expected start times for all fights
-        fights = db.query(Fight).order_by(Fight.fight_number).all()
-        start_time = fights[0].expected_start if fights[0].expected_start else datetime.now()
-
-        for f in fights:
-            if not f.actual_start:  # Only update expected start for fights that haven't started
-                f.expected_start = start_time
-                start_time += timedelta(minutes=f.duration + 2)  # FIGHT_DURATION_BUFFER_MINUTES
-
-        db.commit()
-        return new_fight
-
-    except Exception as e:
-        db.rollback()
-        print(f"Error adding fight: {str(e)}")  # Add debug logging
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.put("/{fight_id}")
-async def update_fight(
+@router.post("/{fight_id}/cancel", response_model=FightSchema)
+async def cancel_fight(
     fight_id: str,
-    fight_update: FightUpdate,
     db: Session = Depends(get_db),
-    _: dict = Depends(verify_token)
+    _: dict = Depends(verify_token)  # Add auth requirement
 ):
+    """Cancel a fight by deleting it and updating subsequent fight numbers and times"""
     try:
-        # Get the fight to update
+        # Get the fight to cancel
         fight = db.query(Fight).filter(Fight.id == fight_id).first()
         if not fight:
             raise HTTPException(status_code=404, detail="Fight not found")
 
-        # Update fight details
-        for field, value in fight_update.dict(exclude_unset=True).items():
-            setattr(fight, field, value)
+        if fight.actual_start:
+            raise HTTPException(status_code=400, detail="Cannot cancel a fight that has already started")
 
-        db.commit()
-        db.refresh(fight)
+        if fight.is_completed:
+            raise HTTPException(status_code=400, detail="Cannot cancel a completed fight")
 
-        # Update expected start times for all fights
-        fights = db.query(Fight).order_by(Fight.fight_number).all()
-        start_time = fights[0].expected_start if fights[0].expected_start else datetime.now()
+        # Store fight data before deletion for return value
+        fight_data = FightSchema.from_orm(fight)
 
-        for fight in fights:
-            if not fight.actual_start:  # Only update expected start for fights that haven't started
-                fight.expected_start = start_time
-                start_time += timedelta(minutes=fight.duration + 2)  # FIGHT_DURATION_BUFFER_MINUTES
+        # Get all subsequent fights
+        subsequent_fights = db.query(Fight).filter(
+            Fight.fight_number > fight.fight_number
+        ).order_by(Fight.fight_number).all()
 
-        db.commit()
-        return fight
+        # Update fight numbers for subsequent fights
+        for subsequent_fight in subsequent_fights:
+            subsequent_fight.fight_number -= 1
 
+        # Delete the fight
+        db.delete(fight)
+
+        # Update times for all remaining fights
+        first_fight = db.query(Fight).order_by(Fight.fight_number).first()
+        if first_fight and first_fight.expected_start:
+            update_fight_times(db, first_fight.expected_start)
+
+        try:
+            db.commit()
+        except Exception as commit_error:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to commit changes: {str(commit_error)}"
+            )
+
+        return fight_data
+
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/next", response_model=List[FightSchema])
-async def get_next_fights(limit: int = 5, db: Session = Depends(get_db)):
-    try:
-        next_fights = db.query(Fight).filter(
-            Fight.is_completed == False
-        ).order_by(Fight.fight_number).limit(limit).all()
-        return next_fights
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/past", response_model=List[FightSchema])
-async def get_past_fights(limit: int = 10, db: Session = Depends(get_db)):
-    try:
-        past_fights = db.query(Fight).filter(
-            Fight.is_completed == True
-        ).order_by(Fight.fight_number.desc()).limit(limit).all()
-        return past_fights
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Public endpoints (no auth required)
-@router.get("/public/ongoing", response_model=Optional[FightSchema])
-async def get_public_ongoing_fight(db: Session = Depends(get_db)):
-    """Public endpoint to get the currently ongoing fight."""
-    try:
-        ongoing_fight = db.query(Fight).filter(
-            Fight.actual_start.isnot(None),
-            Fight.actual_end.is_(None)
-        ).first()
-        return ongoing_fight
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/public/ready", response_model=Optional[FightSchema])
-async def get_public_ready_fight(db: Session = Depends(get_db)):
-    """Public endpoint to get the next ready fight."""
-    try:
-        # First get the ongoing fight
-        ongoing_fight = db.query(Fight).filter(
-            Fight.actual_start.isnot(None),
-            Fight.actual_end.is_(None)
-        ).first()
-
-        if ongoing_fight:
-            # Get the next non-completed fight after the ongoing one
-            ready_fight = db.query(Fight).filter(
-                Fight.expected_start > ongoing_fight.expected_start,
-                Fight.is_completed == False
-            ).order_by(Fight.expected_start).first()
-        else:
-            # If no ongoing fight, get the next non-completed fight
-            ready_fight = db.query(Fight).filter(
-                Fight.is_completed == False,
-                Fight.actual_start.is_(None)
-            ).order_by(Fight.expected_start).first()
-
-        return ready_fight
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to cancel fight: {str(e)}"
+        )

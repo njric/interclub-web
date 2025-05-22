@@ -1,146 +1,132 @@
-# Fight Manager System
+# Interclub Competition Management System
 
-A comprehensive system for managing combat sports events, featuring real-time fight scheduling, tracking, and management.
+A comprehensive web application for managing interclub combat sports competitions, featuring real-time fight scheduling, status tracking, and administrative controls.
+
+## Project Structure
+
+```
+interclub-web/
+├── backend/                # FastAPI backend service
+│   ├── app/               # Application code
+│   │   ├── database/      # Database configuration
+│   │   ├── models/        # SQLAlchemy models
+│   │   ├── routers/       # API endpoints
+│   │   ├── schemas/       # Pydantic models
+│   │   └── utils/         # Utility functions
+│   ├── tests/             # Backend tests
+│   └── README.md          # Backend documentation
+├── admin/                 # React admin dashboard
+│   ├── src/              # Source code
+│   │   ├── components/   # React components
+│   │   ├── context/      # React context providers
+│   │   └── services/     # API services
+│   └── README.md         # Frontend documentation
+└── README.md             # This file
+```
 
 ## Features
 
-- Real-time fight management
-- Dynamic fight scheduling with automatic time adjustments
-- Fight status tracking (scheduled, in progress, completed)
-- Fighter and club management
-- CSV import for bulk fight creation
-- Admin interface for fight management
-- Public interface for viewing fight schedules
-- Drag-and-drop fight reordering
-- Fight editing and cancellation
+- **Real-time Fight Management**
+  - Live fight status tracking
+  - Dynamic schedule adjustments
+  - Automatic time calculations
 
-## Tech Stack
+- **Administrative Dashboard**
+  - Secure authentication system
+  - Fight import from CSV
+  - Manual fight creation and editing
+  - Schedule management
+
+- **User Interface**
+  - Public view for spectators
+  - Real-time fight status updates
+  - Upcoming and past fights display
+
+## Technology Stack
 
 ### Backend
-- FastAPI (Python)
-- PostgreSQL
-- SQLAlchemy ORM
-- Pydantic for data validation
+- FastAPI (Python web framework)
+- SQLAlchemy (ORM)
+- PostgreSQL (Database)
+- JWT Authentication
+- Pytest (Testing)
 
 ### Frontend
-- React
+- React 18
 - TypeScript
-- Material-UI (MUI)
-- React Beautiful DND
+- Material-UI
 - Vite
+- React Router
+- Axios
 
-## Setup
+## Getting Started
 
-### Prerequisites
-- Python 3.8+
-- Node.js 16+
-- PostgreSQL
-
-### Backend Setup
-
-1. Create a virtual environment:
+1. Clone the repository:
 ```bash
+git clone https://github.com/yourusername/interclub-web.git
+cd interclub-web
+```
+
+2. Set up the backend:
+```bash
+cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -e .
 ```
 
-2. Install dependencies:
+3. Set up the frontend:
 ```bash
-pip install -r requirements.txt
-```
-
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your database credentials and other settings
-```
-
-4. Initialize the database:
-```bash
-# Make sure PostgreSQL is running
-python fight_manager_backend.py
-```
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-```bash
-cd fight-manager-admin
-```
-
-2. Install dependencies:
-```bash
+cd ../admin
 npm install
 ```
 
-3. Start the development server:
+4. Create environment files:
+- Copy `backend/.env.example` to `backend/.env`
+- Configure your database and authentication settings
+
+5. Start the development servers:
+
+Backend:
 ```bash
+cd backend
+uvicorn app.main:app --reload
+```
+
+Frontend:
+```bash
+cd admin
 npm run dev
 ```
 
-## Usage
-
-### Admin Interface
-- Access the admin interface at `http://localhost:5173/admin`
-- Features:
-  - Set start time for fights
-  - Add/Edit/Cancel fights
-  - Import fights from CSV
-  - Monitor ongoing fights
-  - Start/End fights
-  - Reorder fights via drag and drop
-
-### Public Interface
-- Access the public interface at `http://localhost:5173`
-- Features:
-  - View ongoing fight
-  - View upcoming fights
-  - View past fights
-  - Real-time updates
-
-## API Documentation
-
-The API documentation is available at `http://localhost:8000/docs` when the backend server is running.
-
-### Key Endpoints
-
-- `GET /fights` - List all fights
-- `POST /fights/start-time` - Set start time for fights
-- `POST /fights/import` - Import fights from CSV
-- `POST /fights/{fight_id}/start` - Start a fight
-- `POST /fights/{fight_id}/end` - End a fight
-- `POST /fights/{fight_id}/cancel` - Cancel a fight
-- `GET /fights/ongoing` - Get current ongoing fight
-- `GET /fights/ready` - Get next ready fight
-- `GET /fights/next` - Get upcoming fights
-- `GET /fights/past` - Get past fights
-
 ## Development
 
-### Project Structure
+- Backend API documentation: http://localhost:8000/docs
+- Admin dashboard: http://localhost:5173
+- Public interface: http://localhost:5173/
 
-```
-├── backend/               # Backend modules
-├── fight-manager-admin/   # Frontend React application
-├── requirements.txt       # Python dependencies
-├── .env                  # Environment variables
-└── README.md            # This file
+## Testing
+
+Backend:
+```bash
+cd backend
+pytest
 ```
 
-### Contributing
+Frontend:
+```bash
+cd admin
+npm run test
+```
+
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+3. Make your changes
+4. Run tests
+5. Submit a pull request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Material-UI for the component library
-- FastAPI for the backend framework
-- React Beautiful DND for drag-and-drop functionality

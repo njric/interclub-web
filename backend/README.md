@@ -1,4 +1,4 @@
-# Fight Manager Backend
+# Interclub Competition Backend
 
 Backend service for managing combat sports events, featuring real-time fight scheduling and tracking.
 
@@ -66,7 +66,7 @@ uvicorn app.main:app --reload
 ## Project Structure
 
 ```
-fight_manager/
+backend/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py              # FastAPI application

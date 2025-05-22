@@ -126,10 +126,19 @@ const api = {
     return response.data;
   },
 
-  // Cancel a fight (move to end of schedule)
+  // Cancel a fight
   cancelFight: async (fightId: string): Promise<Fight> => {
-    const response = await axios.post(`${API_URL}/fights/${fightId}/cancel`);
-    return response.data;
+    try {
+      const response = await axios.post(`${API_URL}/fights/${fightId}/cancel`, null, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('API Error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   // Update fight number

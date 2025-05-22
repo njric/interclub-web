@@ -44,7 +44,7 @@ function AdminPanel() {
     <>
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>Fight Manager Admin</Typography>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>Interclub Competition Admin</Typography>
           <Button color="inherit" onClick={logout}>Logout</Button>
         </Toolbar>
       </AppBar>
