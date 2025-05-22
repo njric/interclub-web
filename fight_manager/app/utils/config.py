@@ -13,3 +13,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/f
 
 # CORS settings
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+
+# Authentication settings
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-keep-it-secret")  # Change in production!
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))

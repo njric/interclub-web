@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Form
 from sqlalchemy.orm import Session
 import csv
 import io
@@ -15,8 +15,13 @@ from ..schemas.fight import (
     StartTimeUpdate
 )
 from ..utils.time import update_fight_times, update_subsequent_fights
+from ..utils.auth import get_current_active_user, get_current_admin_user
+from ..models.user import User
 
-router = APIRouter(prefix="/fights", tags=["fights"])
+router = APIRouter(
+    prefix="/fights",
+    tags=["fights"]
+)
 
 @router.get("/", response_model=List[FightSchema])
 async def list_fights(db: Session = Depends(get_db)):
@@ -26,8 +31,11 @@ async def list_fights(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/import")
-async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_db)):
+@router.post("/import", status_code=200)
+async def import_fights(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
 
@@ -41,8 +49,12 @@ async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_
             "fighter_b", "fighter_b_club",
             "weight_class", "duration"
         }
+
+        if not reader.fieldnames:
+            raise HTTPException(status_code=400, detail="CSV file is empty or malformed")
+
         if not all(field in reader.fieldnames for field in required_fields):
-            missing_fields = required_fields - set(reader.fieldnames or [])
+            missing_fields = required_fields - set(reader.fieldnames)
             raise HTTPException(
                 status_code=400,
                 detail=f"Missing required fields: {', '.join(missing_fields)}"
@@ -85,7 +97,8 @@ async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_
                 imported_count += 1
                 next_fight_number += 1
                 start_time += timedelta(minutes=duration + 2)  # FIGHT_DURATION_BUFFER_MINUTES
-            except (ValueError, KeyError):
+            except (ValueError, KeyError) as e:
+                print(f"Error processing row: {e}")
                 continue
 
         db.commit()
@@ -93,6 +106,7 @@ async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_
 
     except Exception as e:
         db.rollback()
+        print(f"Import error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/start-time")
@@ -236,55 +250,80 @@ async def get_ready_fight(db: Session = Depends(get_db)):
 
 @router.delete("/", response_model=dict)
 async def clear_all_fights(db: Session = Depends(get_db)):
-    """Clear all fights from the database"""
     try:
         db.query(Fight).delete()
         db.commit()
-        return {"message": "All fights cleared successfully"}
+        return {"message": "All fights cleared"}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/add", response_model=FightSchema)
 async def add_fight(fight: FightCreate, db: Session = Depends(get_db)):
-    """Add a new fight to the schedule."""
     try:
-        # Get the highest fight number if position is not specified
-        if fight.position is None:
-            last_fight = db.query(Fight).order_by(Fight.fight_number.desc()).first()
-            fight_number = (last_fight.fight_number + 1) if last_fight else 1
-        else:
-            fight_number = fight.position
+        # Get the highest fight number
+        last_fight = db.query(Fight).order_by(Fight.fight_number.desc()).first()
+        next_fight_number = (last_fight.fight_number + 1) if last_fight else 1
 
-            # Shift existing fights to make room for the new one
-            db.query(Fight).filter(
-                Fight.fight_number >= fight_number
-            ).update(
-                {Fight.fight_number: Fight.fight_number + 1}
-            )
+        # Get current start time from last fight or use current time
+        current_time = datetime.now()
+        if last_fight and last_fight.expected_start:
+            # If there's a last fight, set start time after it
+            last_fight_end = last_fight.expected_start + timedelta(minutes=last_fight.duration + 2)
+            current_time = max(current_time, last_fight_end)
 
         # Create new fight
         new_fight = Fight(
             id=str(uuid.uuid4()),
-            fight_number=fight_number,
+            fight_number=next_fight_number,
             fighter_a=fight.fighter_a,
             fighter_a_club=fight.fighter_a_club,
             fighter_b=fight.fighter_b,
             fighter_b_club=fight.fighter_b_club,
             weight_class=fight.weight_class,
             duration=fight.duration,
-            expected_start=datetime.now() + timedelta(minutes=fight_number * (fight.duration + 2)),
+            expected_start=current_time,
             is_completed=False
         )
+
+        # If position is specified, adjust fight numbers
+        if fight.position is not None:
+            # Validate position
+            if fight.position < 1:
+                raise HTTPException(status_code=400, detail="Position must be positive")
+
+            # Get all fights ordered by fight number
+            fights = db.query(Fight).order_by(Fight.fight_number).all()
+
+            if fight.position > len(fights) + 1:
+                new_fight.fight_number = len(fights) + 1
+            else:
+                # Shift fight numbers for all fights at and after the position
+                for existing_fight in fights:
+                    if existing_fight.fight_number >= fight.position:
+                        existing_fight.fight_number += 1
+                new_fight.fight_number = fight.position
 
         db.add(new_fight)
         db.commit()
         db.refresh(new_fight)
 
+        # Update expected start times for all fights
+        fights = db.query(Fight).order_by(Fight.fight_number).all()
+        start_time = fights[0].expected_start if fights[0].expected_start else datetime.now()
+
+        for f in fights:
+            if not f.actual_start:  # Only update expected start for fights that haven't started
+                f.expected_start = start_time
+                start_time += timedelta(minutes=f.duration + 2)  # FIGHT_DURATION_BUFFER_MINUTES
+
+        db.commit()
         return new_fight
+
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        print(f"Error adding fight: {str(e)}")  # Add debug logging
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{fight_id}", response_model=FightSchema)
 async def update_fight(
@@ -292,49 +331,91 @@ async def update_fight(
     fight_update: FightUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update an existing fight."""
     try:
-        # Get the fight
+        # Get the fight to update
         fight = db.query(Fight).filter(Fight.id == fight_id).first()
         if not fight:
             raise HTTPException(status_code=404, detail="Fight not found")
 
-        # Don't allow updating completed fights
-        if fight.is_completed:
-            raise HTTPException(status_code=400, detail="Cannot update a completed fight")
-
-        # Update the fight with non-null values
-        if fight_update.fighter_a is not None:
-            fight.fighter_a = fight_update.fighter_a
-        if fight_update.fighter_b is not None:
-            fight.fighter_b = fight_update.fighter_b
-        if fight_update.fighter_a_club is not None:
-            fight.fighter_a_club = fight_update.fighter_a_club
-        if fight_update.fighter_b_club is not None:
-            fight.fighter_b_club = fight_update.fighter_b_club
-        if fight_update.weight_class is not None:
-            fight.weight_class = fight_update.weight_class
-        if fight_update.duration is not None:
-            fight.duration = fight_update.duration
-
-            # If duration changed and fight hasn't started, update expected times
-            if not fight.actual_start:
-                # Get all non-started fights after this one
-                subsequent_fights = db.query(Fight).filter(
-                    Fight.fight_number > fight.fight_number,
-                    Fight.actual_start.is_(None)
-                ).order_by(Fight.fight_number).all()
-
-                # Update their expected start times
-                current_time = fight.expected_start
-                for f in subsequent_fights:
-                    current_time += timedelta(minutes=f.duration + 2)  # FIGHT_DURATION_BUFFER_MINUTES
-                    f.expected_start = current_time
+        # Update fight details
+        for field, value in fight_update.dict(exclude_unset=True).items():
+            setattr(fight, field, value)
 
         db.commit()
         db.refresh(fight)
+
+        # Update expected start times for all fights
+        fights = db.query(Fight).order_by(Fight.fight_number).all()
+        start_time = fights[0].expected_start if fights[0].expected_start else datetime.now()
+
+        for fight in fights:
+            if not fight.actual_start:  # Only update expected start for fights that haven't started
+                fight.expected_start = start_time
+                start_time += timedelta(minutes=fight.duration + 2)  # FIGHT_DURATION_BUFFER_MINUTES
+
+        db.commit()
         return fight
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/next", response_model=List[FightSchema])
+async def get_next_fights(limit: int = 5, db: Session = Depends(get_db)):
+    try:
+        next_fights = db.query(Fight).filter(
+            Fight.is_completed == False
+        ).order_by(Fight.fight_number).limit(limit).all()
+        return next_fights
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/past", response_model=List[FightSchema])
+async def get_past_fights(limit: int = 10, db: Session = Depends(get_db)):
+    try:
+        past_fights = db.query(Fight).filter(
+            Fight.is_completed == True
+        ).order_by(Fight.fight_number.desc()).limit(limit).all()
+        return past_fights
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Public endpoints (no auth required)
+@router.get("/public/ongoing", response_model=Optional[FightSchema])
+async def get_public_ongoing_fight(db: Session = Depends(get_db)):
+    """Public endpoint to get the currently ongoing fight."""
+    try:
+        ongoing_fight = db.query(Fight).filter(
+            Fight.actual_start.isnot(None),
+            Fight.actual_end.is_(None)
+        ).first()
+        return ongoing_fight
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/public/ready", response_model=Optional[FightSchema])
+async def get_public_ready_fight(db: Session = Depends(get_db)):
+    """Public endpoint to get the next ready fight."""
+    try:
+        # First get the ongoing fight
+        ongoing_fight = db.query(Fight).filter(
+            Fight.actual_start.isnot(None),
+            Fight.actual_end.is_(None)
+        ).first()
+
+        if ongoing_fight:
+            # Get the next non-completed fight after the ongoing one
+            ready_fight = db.query(Fight).filter(
+                Fight.expected_start > ongoing_fight.expected_start,
+                Fight.is_completed == False
+            ).order_by(Fight.expected_start).first()
+        else:
+            # If no ongoing fight, get the next non-completed fight
+            ready_fight = db.query(Fight).filter(
+                Fight.is_completed == False,
+                Fight.actual_start.is_(None)
+            ).order_by(Fight.expected_start).first()
+
+        return ready_fight
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

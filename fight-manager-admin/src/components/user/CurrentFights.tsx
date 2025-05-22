@@ -18,10 +18,11 @@ const CurrentFights: React.FC = () => {
       try {
         setIsLoading(true);
         const fights = await api.getNextFights(100); // Get all upcoming fights
-        // Filter out the ready fight if it exists
-        const filteredFights = readyFight
-          ? fights.filter(fight => fight.id !== readyFight.id)
-          : fights;
+        // Filter out both the ready fight and ongoing fight
+        const filteredFights = fights.filter(fight =>
+          (!readyFight || fight.id !== readyFight.id) &&
+          (!ongoingFight || fight.id !== ongoingFight.id)
+        );
         setNextFights(filteredFights);
         setError(null);
       } catch (error) {
@@ -37,7 +38,7 @@ const CurrentFights: React.FC = () => {
     // Refresh every 30 seconds
     const interval = setInterval(loadNextFights, 30000);
     return () => clearInterval(interval);
-  }, [readyFight]);
+  }, [readyFight, ongoingFight]);
 
   const SectionTitle: React.FC<{ title: string; highlight?: boolean }> = ({ title, highlight }) => (
     <Typography
