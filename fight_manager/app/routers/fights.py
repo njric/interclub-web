@@ -15,7 +15,7 @@ from ..schemas.fight import (
     StartTimeUpdate
 )
 from ..utils.time import update_fight_times, update_subsequent_fights
-from ..utils.auth import get_current_active_user, get_current_admin_user
+from ..utils.auth import get_current_active_user, get_current_admin_user, require_auth, verify_token
 from ..models.user import User
 
 router = APIRouter(
@@ -31,10 +31,11 @@ async def list_fights(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/import", status_code=200)
+@router.post("/import")
 async def import_fights(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: dict = Depends(verify_token)
 ):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
@@ -110,7 +111,11 @@ async def import_fights(
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/start-time")
-async def set_start_time(start_time: StartTimeUpdate, db: Session = Depends(get_db)):
+async def set_start_time(
+    start_time: StartTimeUpdate,
+    db: Session = Depends(get_db),
+    _: dict = Depends(verify_token)
+):
     """Set the start time for all fights."""
     try:
         # Parse the time string (HH:mm:ss) and combine with today's date
@@ -137,8 +142,12 @@ async def set_start_time(start_time: StartTimeUpdate, db: Session = Depends(get_
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating start time: {str(e)}")
 
-@router.post("/{fight_id}/start", response_model=FightSchema)
-async def start_fight(fight_id: str, db: Session = Depends(get_db)):
+@router.post("/{fight_id}/start")
+async def start_fight(
+    fight_id: str,
+    db: Session = Depends(get_db),
+    _: dict = Depends(verify_token)
+):
     try:
         fight = db.query(Fight).filter(Fight.id == fight_id).first()
         if not fight:
@@ -176,8 +185,12 @@ async def start_fight(fight_id: str, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/{fight_id}/end", response_model=FightSchema)
-async def end_fight(fight_id: str, db: Session = Depends(get_db)):
+@router.post("/{fight_id}/end")
+async def end_fight(
+    fight_id: str,
+    db: Session = Depends(get_db),
+    _: dict = Depends(verify_token)
+):
     try:
         fight = db.query(Fight).filter(Fight.id == fight_id).first()
         if not fight:
@@ -248,8 +261,11 @@ async def get_ready_fight(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/", response_model=dict)
-async def clear_all_fights(db: Session = Depends(get_db)):
+@router.delete("/")
+async def clear_all_fights(
+    db: Session = Depends(get_db),
+    _: dict = Depends(verify_token)
+):
     try:
         db.query(Fight).delete()
         db.commit()
@@ -258,8 +274,12 @@ async def clear_all_fights(db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/add", response_model=FightSchema)
-async def add_fight(fight: FightCreate, db: Session = Depends(get_db)):
+@router.post("/add")
+async def add_fight(
+    fight: FightCreate,
+    db: Session = Depends(get_db),
+    _: dict = Depends(verify_token)
+):
     try:
         # Get the highest fight number
         last_fight = db.query(Fight).order_by(Fight.fight_number.desc()).first()
@@ -325,11 +345,12 @@ async def add_fight(fight: FightCreate, db: Session = Depends(get_db)):
         print(f"Error adding fight: {str(e)}")  # Add debug logging
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/{fight_id}", response_model=FightSchema)
+@router.put("/{fight_id}")
 async def update_fight(
     fight_id: str,
     fight_update: FightUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: dict = Depends(verify_token)
 ):
     try:
         # Get the fight to update

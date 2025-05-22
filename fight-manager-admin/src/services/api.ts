@@ -5,6 +5,15 @@ const API_URL = 'http://localhost:8000';
 // Configure axios defaults
 axios.defaults.headers.common['Accept'] = 'application/json';
 
+// Add interceptor to include auth token
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export interface Fight {
   id: string;
   fight_number: number;
@@ -31,6 +40,20 @@ export interface FightCreate {
 }
 
 const api = {
+  // Auth endpoints
+  login: async (username: string, password: string): Promise<{ token: string }> => {
+    const formData = new URLSearchParams();
+    formData.append('username', username);
+    formData.append('password', password);
+
+    const response = await axios.post(`${API_URL}/auth/login`, formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return response.data;
+  },
+
   // Get all fights
   getFights: async (): Promise<Fight[]> => {
     const response = await axios.get(`${API_URL}/fights`);

@@ -2,9 +2,12 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Security
+from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+import os
+from dotenv import load_dotenv
+from pathlib import Path
 
 from ..database.database import get_db
 from ..models.user import User
@@ -20,6 +23,13 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
+# Load .env from the root directory
+root_dir = Path(__file__).resolve().parents[3]  # Go up 3 levels to reach the root
+load_dotenv(root_dir / '.env')
+
+JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key")
+security = HTTPBearer()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
@@ -80,3 +90,20 @@ async def get_current_admin_user(
             detail="Not enough permissions"
         )
     return current_user
+
+async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        exp = payload.get("exp")
+        if exp is None:
+            raise HTTPException(status_code=401, detail="Token is invalid")
+        if datetime.utcnow().timestamp() > exp:
+            raise HTTPException(status_code=401, detail="Token has expired")
+        return payload
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+require_auth = Depends(verify_token)

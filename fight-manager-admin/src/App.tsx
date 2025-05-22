@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Container, CssBaseline, AppBar, Toolbar, Typography, Tabs, Tab, Box } from '@mui/material';
+import { Container, CssBaseline, AppBar, Toolbar, Typography, Tabs, Tab, Box, Button } from '@mui/material';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import FightList from './components/FightList';
 import FightStatus from './components/FightStatus';
 import ImportFights from './components/ImportFights';
 import UserInterface from './components/user/UserInterface';
+import LoginPage from './components/auth/LoginPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import { FightProvider } from './context/FightContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css';
 
 interface TabPanelProps {
@@ -31,6 +34,7 @@ function TabPanel(props: TabPanelProps) {
 
 function AdminPanel() {
   const [currentTab, setCurrentTab] = useState(0);
+  const { logout } = useAuth();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -40,7 +44,8 @@ function AdminPanel() {
     <>
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6">Fight Manager Admin</Typography>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>Fight Manager Admin</Typography>
+          <Button color="inherit" onClick={logout}>Logout</Button>
         </Toolbar>
       </AppBar>
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -68,16 +73,23 @@ function AdminPanel() {
 
 function App() {
   return (
-    <FightProvider>
-      <CssBaseline />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/" element={<UserInterface />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </FightProvider>
+    <AuthProvider>
+      <FightProvider>
+        <BrowserRouter>
+          <CssBaseline />
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <AdminPanel />
+              </ProtectedRoute>
+            } />
+            <Route path="/" element={<UserInterface />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </FightProvider>
+    </AuthProvider>
   );
 }
 
