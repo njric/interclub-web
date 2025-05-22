@@ -14,10 +14,20 @@ export interface Fight {
   fighter_b_club: string;
   weight_class: number;
   duration: number;
-  expected_start: string;
-  actual_start: string | null;
-  actual_end: string | null;
+  expected_start?: string;
+  actual_start?: string;
+  actual_end?: string;
   is_completed: boolean;
+}
+
+export interface FightCreate {
+  fighter_a: string;
+  fighter_a_club: string;
+  fighter_b: string;
+  fighter_b_club: string;
+  weight_class: number;
+  duration: number;
+  position?: number;
 }
 
 const api = {
@@ -102,6 +112,26 @@ const api = {
   // Update fight number
   updateFightNumber: async (fightId: string, newNumber: number): Promise<Fight[]> => {
     const response = await axios.patch(`${API_URL}/fights/${fightId}/number/${newNumber}`);
+    return response.data;
+  },
+
+  // Set start time for first fight
+  setStartTime: async (startTime: string): Promise<{ message: string }> => {
+    const response = await axios.post(`${API_URL}/fights/start-time`, {
+      start_time: startTime,
+    });
+    return response.data;
+  },
+
+  // Add a new fight
+  addFight: async (fight: FightCreate): Promise<Fight> => {
+    const response = await axios.post(`${API_URL}/fights/add`, fight);
+    return response.data;
+  },
+
+  // Update an existing fight
+  updateFight: async (fightId: string, fight: Omit<FightCreate, 'position'>): Promise<Fight> => {
+    const response = await axios.put(`${API_URL}/fights/${fightId}`, fight);
     return response.data;
   },
 };

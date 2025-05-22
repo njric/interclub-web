@@ -20,61 +20,94 @@ import {
   DialogActions,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
-import type { Fight } from '../services/api';
+import type { Fight, FightCreate } from '../services/api';
 import api from '../services/api';
 import { useFightContext } from '../context/FightContext';
 import { alpha } from '@mui/material/styles';
 
-interface EditDialogProps {
+interface EditFightDialogProps {
   open: boolean;
   fight: Fight | null;
-  totalFights: number;
   onClose: () => void;
-  onSave: (newNumber: number) => void;
+  onSave: (updatedFight: Omit<FightCreate, 'position'>) => void;
 }
 
-const EditDialog: React.FC<EditDialogProps> = ({ open, fight, totalFights, onClose, onSave }) => {
-  const [newNumber, setNewNumber] = useState<number>(fight?.fight_number || 1);
-  const [error, setError] = useState<string>('');
+const EditFightDialog: React.FC<EditFightDialogProps> = ({ open, fight, onClose, onSave }) => {
+  const [editedFight, setEditedFight] = useState<Omit<FightCreate, 'position'>>({
+    fighter_a: '',
+    fighter_a_club: '',
+    fighter_b: '',
+    fighter_b_club: '',
+    weight_class: 0,
+    duration: 15,
+  });
 
   useEffect(() => {
     if (fight) {
-      setNewNumber(fight.fight_number);
+      setEditedFight({
+        fighter_a: fight.fighter_a,
+        fighter_a_club: fight.fighter_a_club,
+        fighter_b: fight.fighter_b,
+        fighter_b_club: fight.fighter_b_club,
+        weight_class: fight.weight_class,
+        duration: fight.duration,
+      });
     }
   }, [fight]);
 
-  const handleSave = () => {
-    if (newNumber < 1 || newNumber > totalFights) {
-      setError(`Fight number must be between 1 and ${totalFights}`);
-      return;
-    }
-    onSave(newNumber);
+  const handleSubmit = () => {
+    onSave(editedFight);
   };
 
   return (
-    <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Edit Fight Number</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Edit Fight</DialogTitle>
       <DialogContent>
-        <TextField
-          autoFocus
-          margin="dense"
-          label="New Fight Number"
-          type="number"
-          fullWidth
-          value={newNumber}
-          onChange={(e) => {
-            setNewNumber(parseInt(e.target.value));
-            setError('');
-          }}
-          inputProps={{ min: 1, max: totalFights }}
-          error={!!error}
-          helperText={error || `Enter a number between 1 and ${totalFights}`}
-        />
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Fighter A"
+            value={editedFight.fighter_a}
+            onChange={(e) => setEditedFight({ ...editedFight, fighter_a: e.target.value })}
+            fullWidth
+          />
+          <TextField
+            label="Fighter A Club"
+            value={editedFight.fighter_a_club}
+            onChange={(e) => setEditedFight({ ...editedFight, fighter_a_club: e.target.value })}
+            fullWidth
+          />
+          <TextField
+            label="Fighter B"
+            value={editedFight.fighter_b}
+            onChange={(e) => setEditedFight({ ...editedFight, fighter_b: e.target.value })}
+            fullWidth
+          />
+          <TextField
+            label="Fighter B Club"
+            value={editedFight.fighter_b_club}
+            onChange={(e) => setEditedFight({ ...editedFight, fighter_b_club: e.target.value })}
+            fullWidth
+          />
+          <TextField
+            label="Weight Class (kg)"
+            type="number"
+            value={editedFight.weight_class}
+            onChange={(e) => setEditedFight({ ...editedFight, weight_class: parseInt(e.target.value) })}
+            fullWidth
+          />
+          <TextField
+            label="Duration (minutes)"
+            type="number"
+            value={editedFight.duration}
+            onChange={(e) => setEditedFight({ ...editedFight, duration: parseInt(e.target.value) })}
+            fullWidth
+          />
+        </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained" color="primary">
-          Save
+        <Button onClick={handleSubmit} variant="contained" color="primary">
+          Save Changes
         </Button>
       </DialogActions>
     </Dialog>
@@ -171,69 +204,29 @@ const FightList: React.FC = () => {
     }
   };
 
-  const handleEditNumber = async (newNumber: number) => {
+  const handleEditFight = async (updatedFight: Omit<FightCreate, 'position'>) => {
     if (!editFight) return;
 
-    const originalFights = [...fights];
-
     try {
-      setIsUpdating(true);
-      setMovedFightId(editFight.id);
-
-      // Optimistically update the UI
-      const updatedFights = fights.map(fight => {
-        if (fight.id === editFight.id) {
-          return { ...fight, fight_number: newNumber };
-        }
-        // Update other fights' numbers based on the move
-        if (newNumber > editFight.fight_number) {
-          // Moving fight to a later position
-          if (fight.fight_number > editFight.fight_number && fight.fight_number <= newNumber) {
-            return { ...fight, fight_number: fight.fight_number - 1 };
-          }
-        } else {
-          // Moving fight to an earlier position
-          if (fight.fight_number >= newNumber && fight.fight_number < editFight.fight_number) {
-            return { ...fight, fight_number: fight.fight_number + 1 };
-          }
-        }
-        return fight;
-      }).sort((a, b) => a.fight_number - b.fight_number);
-
-      setFights(updatedFights);
+      await api.updateFight(editFight.id, updatedFight);
+      await loadFights(true);
       setEditFight(null);
-
-      // Make the actual API call
-      const serverUpdatedFights = await api.updateFightNumber(editFight.id, newNumber);
-
-      // Update with server response to ensure consistency
-      setFights(serverUpdatedFights);
-
-      // Clear the moved fight highlight after animation
-      setTimeout(() => {
-        setMovedFightId(null);
-      }, 2000);
+      setError(null);
     } catch (error: any) {
-      console.error('Error updating fight number:', error);
-      // Rollback to original state on error
-      setFights(originalFights);
-      setError(error.response?.data?.detail || 'Error updating fight number. Please try again.');
-    } finally {
-      setIsUpdating(false);
+      console.error('Error updating fight:', error);
+      setError(error.response?.data?.detail || 'Error updating fight. Please try again.');
     }
   };
 
-  const formatTime = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-GB', {
+  const formatTime = (time: string | undefined | null): string => {
+    if (!time) return '-';
+    return new Date(time).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
     });
   };
 
-  const getStartTime = (fight: Fight) => {
+  const getStartTime = (fight: Fight): string => {
     if (fight.actual_start) {
       return formatTime(fight.actual_start);
     }
@@ -243,7 +236,7 @@ const FightList: React.FC = () => {
   return (
     <div>
       <Typography variant="h4" gutterBottom>
-        Fight Schedule
+        Fight Management
       </Typography>
       {isUpdating && (
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -254,15 +247,15 @@ const FightList: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell align="center" sx={{ width: '80px' }}>Fight #</TableCell>
+              <TableCell align="center">Fight #</TableCell>
               <TableCell>Fighter A</TableCell>
               <TableCell>Club A</TableCell>
               <TableCell>Fighter B</TableCell>
               <TableCell>Club B</TableCell>
-              <TableCell align="center">Weight Class</TableCell>
-              <TableCell align="center" sx={{ width: '100px' }}>Duration</TableCell>
-              <TableCell align="center" sx={{ width: '100px' }}>Start</TableCell>
-              <TableCell align="center" sx={{ width: '100px' }}>End</TableCell>
+              <TableCell align="center">Weight (kg)</TableCell>
+              <TableCell align="center">Duration</TableCell>
+              <TableCell align="center">Start Time</TableCell>
+              <TableCell align="center">End Time</TableCell>
               <TableCell align="center">Status</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
@@ -286,7 +279,7 @@ const FightList: React.FC = () => {
                       <IconButton
                         size="small"
                         onClick={() => setEditFight(fight)}
-                        title="Edit fight number"
+                        title="Edit fight"
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
@@ -347,13 +340,14 @@ const FightList: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-      <EditDialog
+
+      <EditFightDialog
         open={!!editFight}
         fight={editFight}
-        totalFights={fights.length}
         onClose={() => setEditFight(null)}
-        onSave={handleEditNumber}
+        onSave={handleEditFight}
       />
+
       <Snackbar
         open={!!error}
         autoHideDuration={6000}
