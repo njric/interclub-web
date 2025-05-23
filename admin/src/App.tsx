@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, CssBaseline, AppBar, Toolbar, Typography, Tabs, Tab, Box, Button } from '@mui/material';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import FightList from './components/FightList';
@@ -9,6 +9,8 @@ import LoginPage from './components/auth/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { FightProvider } from './context/FightContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import api from './services/api';
+import type { Fight } from './services/api';
 import './App.css';
 
 interface TabPanelProps {
@@ -35,6 +37,44 @@ function TabPanel(props: TabPanelProps) {
 function AdminPanel() {
   const [currentTab, setCurrentTab] = useState(0);
   const { logout } = useAuth();
+  const [fights, setFights] = useState<Fight[]>([]);
+
+  useEffect(() => {
+    const loadFights = async () => {
+      try {
+        const data = await api.getFights();
+        setFights(data);
+      } catch (error) {
+        console.error('Error loading fights:', error);
+      }
+    };
+    loadFights();
+  }, []);
+
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    const items = Array.from(fights);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setFights(items);
+
+    try {
+      await api.updateFightNumber(reorderedItem.id, result.destination.index + 1);
+    } catch (error) {
+      console.error('Error updating fight order:', error);
+    }
+  };
+
+  const handleDelete = async (fightId: string) => {
+    try {
+      await api.updateFight(fightId, { is_completed: true });
+      setFights(fights.filter(fight => fight.id !== fightId));
+    } catch (error) {
+      console.error('Error deleting fight:', error);
+    }
+  };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -58,7 +98,11 @@ function AdminPanel() {
           <Box sx={{ my: 4 }}>
             <FightStatus />
             <Box sx={{ mt: 4 }}>
-              <FightList />
+              <FightList
+                fights={fights}
+                onDragEnd={handleDragEnd}
+                onDelete={handleDelete}
+              />
             </Box>
           </Box>
         </TabPanel>

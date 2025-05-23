@@ -9,6 +9,7 @@ class FightBase(BaseModel):
     fighter_b_club: str
     weight_class: int
     duration: int
+    fight_type: str
 
     @field_validator('duration')
     def validate_duration(cls, v):
@@ -32,6 +33,7 @@ class FightUpdate(BaseModel):
     fighter_b_club: Optional[str] = None
     weight_class: Optional[int] = None
     duration: Optional[int] = None
+    fight_type: Optional[str] = None
 
     @field_validator('fighter_a', 'fighter_b', 'fighter_a_club', 'fighter_b_club')
     def validate_fighter_name(cls, v):

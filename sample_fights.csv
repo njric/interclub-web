@@ -1,7 +1,7 @@
-fighter_a,fighter_a_club,fighter_b,fighter_b_club,weight_class,duration
-Buakaw,Por Pramuk,Masato,K-1,76,15
-Saenchai,13 Coins,Pakorn,Por Pramuk,65,15
-Giorgio Petrosyan,Team Petrosyan,Andy Ristie,Mike's Gym,70,15
-Ramon Dekkers,Golden Glory,Coban,Coban's Gym,72,15
-John Wayne Parr,Boonchu,Yodsanklai,13 Coins,75,15
-Nieky Holzken,Team Holzken,Simon Marcus,Siam No.1,80,15
+fighter_a,fighter_a_club,fighter_b,fighter_b_club,weight_class,duration,fight_type
+Buakaw,Por Pramuk,Masato,K-1,76,15,Muay Thai
+Saenchai,13 Coins,Pakorn,Por Pramuk,65,15,MMA
+Giorgio Petrosyan,Team Petrosyan,Andy Ristie,Mike's Gym,70,15,Boxing
+Ramon Dekkers,Golden Glory,Coban,Coban's Gym,72,15,Muay Thai
+John Wayne Parr,Boonchu,Yodsanklai,13 Coins,75,15,Muay Thai
+Nieky Holzken,Team Holzken,Simon Marcus,Siam No.1,80,15,Grappling

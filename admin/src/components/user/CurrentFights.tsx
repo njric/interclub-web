@@ -60,7 +60,7 @@ const CurrentFights: React.FC = () => {
       <Box mb={4}>
         <SectionTitle title="Ongoing Fight" highlight={true} />
         {ongoingFight ? (
-          <FightCard fight={ongoingFight} />
+          <FightCard fight={ongoingFight} showStatus />
         ) : (
           <Typography color="text.secondary">No fight in progress</Typography>
         )}
@@ -70,7 +70,7 @@ const CurrentFights: React.FC = () => {
       <Box mb={4}>
         <SectionTitle title="Ready Fight" />
         {readyFight ? (
-          <FightCard fight={readyFight} />
+          <FightCard fight={readyFight} showStatus />
         ) : (
           <Typography color="text.secondary">No fight ready</Typography>
         )}

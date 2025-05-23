@@ -38,6 +38,7 @@ const AddFightDialog: React.FC<AddFightDialogProps> = ({ open, onClose, totalFig
     weight_class: 0,
     duration: 15,
     position: totalFights + 1,
+    fight_type: 'Boxing'
   });
 
   const handleSubmit = async () => {
@@ -51,49 +52,85 @@ const AddFightDialog: React.FC<AddFightDialogProps> = ({ open, onClose, totalFig
     }
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+    const { name, value } = e.target;
+    setNewFight(prev => ({
+      ...prev,
+      [name as string]: value
+    }));
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Add New Fight</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <TextField
+            name="fighter_a"
             label="Fighter A"
             value={newFight.fighter_a}
-            onChange={(e) => setNewFight({ ...newFight, fighter_a: e.target.value })}
+            onChange={handleChange}
+            required
             fullWidth
           />
           <TextField
+            name="fighter_a_club"
             label="Fighter A Club"
             value={newFight.fighter_a_club}
-            onChange={(e) => setNewFight({ ...newFight, fighter_a_club: e.target.value })}
+            onChange={handleChange}
+            required
             fullWidth
           />
           <TextField
+            name="fighter_b"
             label="Fighter B"
             value={newFight.fighter_b}
-            onChange={(e) => setNewFight({ ...newFight, fighter_b: e.target.value })}
+            onChange={handleChange}
+            required
             fullWidth
           />
           <TextField
+            name="fighter_b_club"
             label="Fighter B Club"
             value={newFight.fighter_b_club}
-            onChange={(e) => setNewFight({ ...newFight, fighter_b_club: e.target.value })}
+            onChange={handleChange}
+            required
             fullWidth
           />
           <TextField
+            name="weight_class"
             label="Weight Class (kg)"
             type="number"
             value={newFight.weight_class}
-            onChange={(e) => setNewFight({ ...newFight, weight_class: parseInt(e.target.value) })}
+            onChange={handleChange}
+            required
             fullWidth
           />
           <TextField
+            name="duration"
             label="Duration (minutes)"
             type="number"
             value={newFight.duration}
-            onChange={(e) => setNewFight({ ...newFight, duration: parseInt(e.target.value) })}
+            onChange={handleChange}
+            required
             fullWidth
           />
+          <FormControl fullWidth required>
+            <InputLabel id="fight-type-label">Fight Type</InputLabel>
+            <Select
+              labelId="fight-type-label"
+              name="fight_type"
+              value={newFight.fight_type}
+              label="Fight Type"
+              onChange={handleChange}
+            >
+              {['Boxing', 'Muay Thai', 'Grappling', 'MMA'].map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             label="Position"
             type="number"
@@ -306,14 +343,14 @@ const ImportFights: React.FC = () => {
             Upload a CSV file with the following columns:
           </Typography>
           <Typography variant="body2" component="pre" sx={{ backgroundColor: '#f5f5f5', p: 1 }}>
-            fighter_a,fighter_a_club,fighter_b,fighter_b_club,weight_class,duration
+            fighter_a,fighter_a_club,fighter_b,fighter_b_club,weight_class,duration,fight_type
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
             Example:
           </Typography>
           <Typography variant="body2" component="pre" sx={{ backgroundColor: '#f5f5f5', p: 1 }}>
-            Buakaw,Por Pramuk,Masato,K-1,76,15
-            Saenchai,13 Coins,Pakorn,Por Pramuk,65,15
+            Buakaw,Por Pramuk,Masato,K-1,76,15,Muay Thai
+            Saenchai,13 Coins,Pakorn,Por Pramuk,65,15,Boxing
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
             Notes:
@@ -324,6 +361,9 @@ const ImportFights: React.FC = () => {
             </Typography>
             <Typography variant="body2" component="li">
               duration: Fight duration in minutes
+            </Typography>
+            <Typography variant="body2" component="li">
+              fight_type: Type of fight (Boxing, Muay Thai, Grappling, MMA)
             </Typography>
           </ul>
         </Box>

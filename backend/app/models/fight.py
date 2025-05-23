@@ -15,6 +15,7 @@ class Fight(Base):
     fighter_b_club = Column(String, nullable=False)
     weight_class = Column(Integer, nullable=False)
     duration = Column(Integer, nullable=False)  # in minutes
+    fight_type = Column(String, nullable=False, default="Boxing")
     expected_start = Column(DateTime, nullable=True)
     actual_start = Column(DateTime, nullable=True)
     actual_end = Column(DateTime, nullable=True)

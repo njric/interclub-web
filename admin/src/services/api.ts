@@ -23,9 +23,10 @@ export interface Fight {
   fighter_b_club: string;
   weight_class: number;
   duration: number;
-  expected_start?: string;
-  actual_start?: string;
-  actual_end?: string;
+  fight_type: string;
+  expected_start: string;
+  actual_start: string | null;
+  actual_end: string | null;
   is_completed: boolean;
 }
 
@@ -36,6 +37,7 @@ export interface FightCreate {
   fighter_b_club: string;
   weight_class: number;
   duration: number;
+  fight_type: string;
   position?: number;
 }
 
@@ -143,8 +145,17 @@ const api = {
 
   // Update fight number
   updateFightNumber: async (fightId: string, newNumber: number): Promise<Fight[]> => {
-    const response = await axios.patch(`${API_URL}/fights/${fightId}/number/${newNumber}`);
-    return response.data;
+    try {
+      const response = await axios.patch(`${API_URL}/fights/${fightId}/number/${newNumber}`, null, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('API Error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   // Set start time for first fight
@@ -157,14 +168,32 @@ const api = {
 
   // Add a new fight
   addFight: async (fight: FightCreate): Promise<Fight> => {
-    const response = await axios.post(`${API_URL}/fights/add`, fight);
-    return response.data;
+    try {
+      const response = await axios.post(`${API_URL}/fights/add`, fight, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('API Error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   // Update an existing fight
   updateFight: async (fightId: string, fight: Omit<FightCreate, 'position'>): Promise<Fight> => {
-    const response = await axios.put(`${API_URL}/fights/${fightId}`, fight);
-    return response.data;
+    try {
+      const response = await axios.patch(`${API_URL}/fights/${fightId}`, fight, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('API Error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 };
 

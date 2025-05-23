@@ -19,12 +19,22 @@ import {
   DialogContent,
   DialogActions,
   DialogContentText,
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { Fight, FightCreate } from '../services/api';
 import api from '../services/api';
 import { useFightContext } from '../context/FightContext';
 import { alpha } from '@mui/material/styles';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import DragHandleIcon from '@mui/icons-material/DragHandle';
+import { getClubColor } from '../utils/colors';
 
 interface EditFightDialogProps {
   open: boolean;
@@ -41,6 +51,7 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ open, fight, onClose,
     fighter_b_club: '',
     weight_class: 0,
     duration: 15,
+    fight_type: 'Boxing'
   });
 
   useEffect(() => {
@@ -52,6 +63,7 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ open, fight, onClose,
         fighter_b_club: fight.fighter_b_club,
         weight_class: fight.weight_class,
         duration: fight.duration,
+        fight_type: fight.fight_type
       });
     }
   }, [fight]);
@@ -103,6 +115,21 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ open, fight, onClose,
             onChange={(e) => setEditedFight({ ...editedFight, duration: parseInt(e.target.value) })}
             fullWidth
           />
+          <FormControl fullWidth>
+            <InputLabel id="fight-type-label">Fight Type</InputLabel>
+            <Select
+              labelId="fight-type-label"
+              value={editedFight.fight_type}
+              label="Fight Type"
+              onChange={(e) => setEditedFight({ ...editedFight, fight_type: e.target.value })}
+            >
+              {['Boxing', 'Muay Thai', 'Grappling', 'MMA'].map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -144,10 +171,145 @@ const CancelFightDialog: React.FC<CancelFightDialogProps> = ({ open, fight, onCl
   );
 };
 
-const FightList: React.FC = () => {
-  const [fights, setFights] = useState<Fight[]>([]);
+interface EditFightNumberDialogProps {
+  open: boolean;
+  fight: Fight | null;
+  totalFights: number;
+  onClose: () => void;
+  onSave: (fightId: string, newNumber: number) => void;
+}
+
+const EditFightNumberDialog: React.FC<EditFightNumberDialogProps> = ({
+  open,
+  fight,
+  totalFights,
+  onClose,
+  onSave
+}) => {
+  const [newNumber, setNewNumber] = useState<number>(fight?.fight_number || 1);
+
+  useEffect(() => {
+    if (fight) {
+      setNewNumber(fight.fight_number);
+    }
+  }, [fight]);
+
+  const handleSubmit = () => {
+    if (fight) {
+      onSave(fight.id, newNumber);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>Change Fight Number</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <DialogContentText>
+            Current fight number: {fight?.fight_number}
+          </DialogContentText>
+          <TextField
+            label="New Fight Number"
+            type="number"
+            value={newNumber}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
+              if (value >= 1 && value <= totalFights) {
+                setNewNumber(value);
+              }
+            }}
+            inputProps={{
+              min: 1,
+              max: totalFights,
+            }}
+            fullWidth
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          color="primary"
+          disabled={fight?.fight_number === newNumber}
+        >
+          Save Changes
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+interface FightListProps {
+  fights: Fight[];
+  onDragEnd: (result: any) => void;
+  onDelete: (fightId: string) => void;
+}
+
+const getReadyFight = (fights: Fight[]): Fight | null => {
+  const ongoingFight = fights.find(f => f.actual_start && !f.actual_end);
+
+  if (ongoingFight) {
+    return fights.find(f =>
+      !f.is_completed &&
+      !f.actual_start &&
+      f.expected_start > ongoingFight.expected_start
+    ) || null;
+  }
+
+  return fights.find(f => !f.is_completed && !f.actual_start) || null;
+};
+
+const getNextAvailableFight = (fights: Fight[]): Fight | null => {
+  const readyFight = getReadyFight(fights);
+  if (!readyFight) return null;
+
+  return fights.find(f =>
+    !f.is_completed &&
+    !f.actual_start &&
+    f.expected_start > readyFight.expected_start
+  ) || null;
+};
+
+const canReorderFight = (fight: Fight, fights: Fight[]): boolean => {
+  const nextAvailableFight = getNextAvailableFight(fights);
+  if (!nextAvailableFight) return false;
+
+  return fight.fight_number >= nextAvailableFight.fight_number;
+};
+
+const getReorderButtonTooltip = (fight: Fight, fights: Fight[]): string => {
+  if (fight.is_completed) {
+    return "Cannot reorder completed fights";
+  }
+
+  if (fight.actual_start) {
+    return "Cannot reorder ongoing fight";
+  }
+
+  const readyFight = getReadyFight(fights);
+  if (readyFight && fight.id === readyFight.id) {
+    return "Cannot reorder the next ready fight";
+  }
+
+  const nextAvailableFight = getNextAvailableFight(fights);
+  if (!nextAvailableFight) {
+    return "No fights available for reordering";
+  }
+
+  if (fight.fight_number < nextAvailableFight.fight_number) {
+    return "Cannot reorder fights before the next available fight";
+  }
+
+  return "Change fight number";
+};
+
+const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete }) => {
+  const [fightsState, setFightsState] = useState<Fight[]>(fights);
   const [error, setError] = useState<string | null>(null);
   const [editFight, setEditFight] = useState<Fight | null>(null);
+  const [editFightNumber, setEditFightNumber] = useState<Fight | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [movedFightId, setMovedFightId] = useState<string | null>(null);
   const [cancelFight, setCancelFight] = useState<Fight | null>(null);
@@ -157,6 +319,11 @@ const FightList: React.FC = () => {
   const REFRESH_INTERVAL = 30000; // 30 seconds, can be configured via environment variable
   const AUTO_REFRESH_ENABLED = true; // Can be configured via environment variable
 
+  // Update fightsState when fights prop changes
+  useEffect(() => {
+    setFightsState(fights);
+  }, [fights]);
+
   const loadFights = async (force = false) => {
     // Skip refresh if an update is in progress
     if (isUpdating && !force) return;
@@ -165,8 +332,8 @@ const FightList: React.FC = () => {
       const data = await api.getFights();
 
       // Only update state if the fights have actually changed
-      const hasChanges = !fights.length || data.some((newFight, index) => {
-        const oldFight = fights[index];
+      const hasChanges = !fightsState.length || data.some((newFight, index) => {
+        const oldFight = fightsState[index];
         return !oldFight ||
           oldFight.fight_number !== newFight.fight_number ||
           oldFight.actual_start !== newFight.actual_start ||
@@ -175,7 +342,7 @@ const FightList: React.FC = () => {
       });
 
       if (hasChanges) {
-        setFights(data.sort((a, b) => a.fight_number - b.fight_number));
+        setFightsState(data.sort((a, b) => a.fight_number - b.fight_number));
       }
     } catch (error) {
       console.error('Error loading fights:', error);
@@ -256,7 +423,20 @@ const FightList: React.FC = () => {
     }
   };
 
-  const formatTime = (time: string | undefined | null): string => {
+  const handleUpdateFightNumber = async (fightId: string, newNumber: number) => {
+    try {
+      await api.updateFightNumber(fightId, newNumber);
+      await loadFights(true);
+      setEditFightNumber(null);
+      setError(null);
+    } catch (error: any) {
+      console.error('Error updating fight number:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Error updating fight number. Please try again.';
+      setError(errorMessage);
+    }
+  };
+
+  const formatTime = (time: string | null) => {
     if (!time) return '-';
     return new Date(time).toLocaleTimeString('en-GB', {
       hour: '2-digit',
@@ -286,62 +466,60 @@ const FightList: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell align="center">Fight #</TableCell>
+              <TableCell>Fight #</TableCell>
               <TableCell>Fighter A</TableCell>
-              <TableCell>Club A</TableCell>
               <TableCell>Fighter B</TableCell>
-              <TableCell>Club B</TableCell>
-              <TableCell align="center">Weight (kg)</TableCell>
-              <TableCell align="center">Duration</TableCell>
-              <TableCell align="center">Start Time</TableCell>
-              <TableCell align="center">End Time</TableCell>
-              <TableCell align="center">Status</TableCell>
-              <TableCell align="center">Actions</TableCell>
+              <TableCell>Weight</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Expected Start</TableCell>
+              <TableCell>Duration</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {fights.map((fight) => (
-              <TableRow
-                key={fight.id}
-                sx={{
-                  backgroundColor: fight.id === movedFightId ?
-                    (theme) => alpha(theme.palette.primary.main, 0.1) :
-                    'inherit',
-                  transition: 'all 0.3s ease-in-out',
-                  transform: fight.id === movedFightId ? 'scale(1.01)' : 'scale(1)',
-                }}
-              >
-                <TableCell align="center">
-                  <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
-                    {fight.fight_number}
-                    {!fight.actual_start && (
-                      <IconButton
-                        size="small"
-                        onClick={() => setEditFight(fight)}
-                        title="Edit fight"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    )}
+            {(fightsState || []).map((fight) => (
+              <TableRow key={fight.id} hover>
+                <TableCell>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <span>{fight.fight_number}</span>
+                    <IconButton
+                      size="small"
+                      onClick={() => setEditFightNumber(fight)}
+                      title={getReorderButtonTooltip(fight, fightsState)}
+                      disabled={!canReorderFight(fight, fightsState)}
+                    >
+                      <SwapVertIcon fontSize="small" />
+                    </IconButton>
                   </Stack>
                 </TableCell>
-                <TableCell>{fight.fighter_a}</TableCell>
-                <TableCell>{fight.fighter_a_club}</TableCell>
-                <TableCell>{fight.fighter_b}</TableCell>
-                <TableCell>{fight.fighter_b_club}</TableCell>
-                <TableCell align="center">{fight.weight_class}</TableCell>
-                <TableCell align="center">{fight.duration} min</TableCell>
-                <TableCell align="center">{getStartTime(fight)}</TableCell>
-                <TableCell align="center">{formatTime(fight.actual_end)}</TableCell>
-                <TableCell align="center">
-                  {fight.is_completed
-                    ? 'Completed'
-                    : fight.actual_start
-                    ? 'In Progress'
-                    : 'Scheduled'}
+                <TableCell>
+                  <Stack>
+                    <span>{fight.fighter_a}</span>
+                    <span style={{ color: getClubColor(fight.fighter_a_club) }}>
+                      {fight.fighter_a_club}
+                    </span>
+                  </Stack>
                 </TableCell>
-                <TableCell align="center">
-                  <Stack direction="row" spacing={1} justifyContent="center">
+                <TableCell>
+                  <Stack>
+                    <span>{fight.fighter_b}</span>
+                    <span style={{ color: getClubColor(fight.fighter_b_club) }}>
+                      {fight.fighter_b_club}
+                    </span>
+                  </Stack>
+                </TableCell>
+                <TableCell>{fight.weight_class}kg</TableCell>
+                <TableCell>
+                  <Chip
+                    label={fight.fight_type}
+                    size="small"
+                    color="primary"
+                  />
+                </TableCell>
+                <TableCell>{formatTime(fight.expected_start)}</TableCell>
+                <TableCell>{fight.duration} min</TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1}>
                     {!fight.actual_start && !fight.is_completed && (
                       <>
                         <Button
@@ -360,6 +538,13 @@ const FightList: React.FC = () => {
                         >
                           Cancel
                         </Button>
+                        <IconButton
+                          size="small"
+                          onClick={() => setEditFight(fight)}
+                          title="Edit fight details"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
                       </>
                     )}
                     {fight.actual_start && !fight.actual_end && (
@@ -385,6 +570,14 @@ const FightList: React.FC = () => {
         fight={editFight}
         onClose={() => setEditFight(null)}
         onSave={handleEditFight}
+      />
+
+      <EditFightNumberDialog
+        open={!!editFightNumber}
+        fight={editFightNumber}
+        totalFights={fightsState.length}
+        onClose={() => setEditFightNumber(null)}
+        onSave={handleUpdateFightNumber}
       />
 
       <CancelFightDialog
