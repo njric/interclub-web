@@ -36,6 +36,7 @@ import {
 import type { Fight, FightCreate } from '../services/api';
 import api from '../services/api';
 import { useFightContext } from '../context/FightContext';
+import { useTranslation } from '../hooks/useTranslation';
 import { alpha } from '@mui/material/styles';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
@@ -86,33 +87,32 @@ const canReorderFight = (fight: Fight, fights: Fight[]): boolean => {
   return fight.fight_number >= nextAvailableFight.fight_number;
 };
 
-const getReorderButtonTooltip = (fight: Fight, fights: Fight[]): string => {
+const getReorderButtonTooltip = (fight: Fight, fights: Fight[], t: (key: string) => string): string => {
   if (fight.is_completed) {
-    return "Cannot reorder completed fights";
+    return t('fightList.tooltips.cannotReorderCompleted');
   }
-
-  if (fight.actual_start) {
-    return "Cannot reorder ongoing fight";
+  if (fight.actual_start && !fight.actual_end) {
+    return t('fightList.tooltips.cannotReorderOngoing');
   }
-
   const readyFight = getReadyFight(fights);
-  if (readyFight && fight.id === readyFight.id) {
-    return "Cannot reorder the next ready fight";
+  if (readyFight && readyFight.id === fight.id) {
+    return t('fightList.tooltips.cannotReorderNextReady');
   }
 
-  const nextAvailableFight = getNextAvailableFight(fights);
-  if (!nextAvailableFight) {
-    return "No fights available for reordering";
+  const nextAvailable = getNextAvailableFight(fights);
+  if (!nextAvailable) {
+    return t('fightList.tooltips.noFightsForReordering');
   }
 
-  if (fight.fight_number < nextAvailableFight.fight_number) {
-    return "Cannot reorder fights before the next available fight";
+  if (fight.fight_number < nextAvailable.fight_number) {
+    return t('fightList.tooltips.cannotReorderBeforeNext');
   }
 
-  return "Change fight number";
+  return t('fightList.actions.changeFightNumber');
 };
 
 const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete, onUpdate }) => {
+  const { t } = useTranslation();
   const [fightsState, setFightsState] = useState<Fight[]>(fights);
   const [error, setError] = useState<string | null>(null);
   const [editFight, setEditFight] = useState<Fight | null>(null);
@@ -136,8 +136,9 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
       message: error instanceof Error ? error.message : undefined,
       response: (error as any)?.response
     };
+    const errorMessage = getErrorMessage(apiError, t(defaultMessage));
+    setError(errorMessage);
     logError('FightList', apiError);
-    setError(getErrorMessage(apiError, defaultMessage));
   };
 
   const loadFights = async (force = false) => {
@@ -175,7 +176,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
       onUpdate?.();
       setError(null);
     } catch (error) {
-      handleError(error, 'Error starting fight. Please try again.');
+      handleError(error, 'fightList.errors.starting');
     }
   };
 
@@ -187,7 +188,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
       onUpdate?.();
       setError(null);
     } catch (error) {
-      handleError(error, 'Error ending fight. Please try again.');
+      handleError(error, 'fightList.errors.ending');
     }
   };
 
@@ -220,7 +221,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
       setError(null);
       onUpdate?.();
     } catch (error) {
-      handleError(error, 'Error updating fight. Please try again.');
+      handleError(error, 'fightList.errors.updating');
     }
   };
 
@@ -232,7 +233,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
       setError(null);
       onUpdate?.();
     } catch (error) {
-      handleError(error, 'Error updating fight number. Please try again.');
+      handleError(error, 'fightList.errors.updatingNumber');
     }
   };
 
@@ -244,7 +245,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
       onDelete?.(fightId);
       onUpdate?.();
     } catch (error) {
-      handleError(error, 'Error deleting fight. Please try again.');
+      handleError(error, 'fightList.errors.deleting');
     }
   };
 
@@ -268,25 +269,25 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
   return (
     <div>
       <Typography variant="h4" gutterBottom>
-        Fight Management
+        {t('fightList.title')}
       </Typography>
       {isUpdating && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Updating fight order...
+          {t('fightList.updatingOrder')}
         </Alert>
       )}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Fight #</TableCell>
-              <TableCell>Fighter A</TableCell>
-              <TableCell>Fighter B</TableCell>
-              <TableCell>Weight</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Expected Start</TableCell>
-              <TableCell>Duration</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell>{t('fightList.tableHeaders.fightNumber')}</TableCell>
+              <TableCell>{t('fightList.tableHeaders.fighterA')}</TableCell>
+              <TableCell>{t('fightList.tableHeaders.fighterB')}</TableCell>
+              <TableCell>{t('fightList.tableHeaders.weight')}</TableCell>
+              <TableCell>{t('fightList.tableHeaders.type')}</TableCell>
+              <TableCell>{t('fightList.tableHeaders.expectedStart')}</TableCell>
+              <TableCell>{t('fightList.tableHeaders.duration')}</TableCell>
+              <TableCell>{t('fightList.tableHeaders.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -299,7 +300,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
                       <IconButton
                         size="small"
                         onClick={() => setEditFightNumber(fight)}
-                        title={getReorderButtonTooltip(fight, fightsState)}
+                        title={getReorderButtonTooltip(fight, fightsState, t)}
                         disabled={!canReorderFight(fight, fightsState)}
                       >
                         <SwapVertIcon fontSize="small" />
@@ -323,7 +324,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
                     </span>
                   </Stack>
                 </TableCell>
-                <TableCell>{fight.weight_class}kg</TableCell>
+                <TableCell>{fight.weight_class}{t('common.kg')}</TableCell>
                 <TableCell>
                   <Chip
                     label={fight.fight_type}
@@ -336,7 +337,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
                 <TableCell>
                   <Stack direction="row" spacing={1}>
                     {!fight.actual_start && !fight.is_completed && (
-                      <Tooltip title="Start Fight">
+                      <Tooltip title={t('fightList.actions.startFight')}>
                         <IconButton
                           size="small"
                           onClick={() => handleStartFight(fight)}
@@ -346,7 +347,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
                       </Tooltip>
                     )}
                     {fight.actual_start && !fight.actual_end && (
-                      <Tooltip title="End Fight">
+                      <Tooltip title={t('fightList.actions.endFight')}>
                         <IconButton
                           size="small"
                           onClick={() => handleEndFight(fight)}
@@ -357,7 +358,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
                     )}
                     {canEditFight(fight, fightsState) && (
                       <>
-                        <Tooltip title="Edit Fight">
+                        <Tooltip title={t('fightList.actions.editFight')}>
                           <IconButton
                             size="small"
                             onClick={() => setEditFight(fight)}
@@ -365,7 +366,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
                             <EditIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete Fight">
+                        <Tooltip title={t('fightList.actions.deleteFight')}>
                           <IconButton
                             size="small"
                             onClick={() => handleDeleteFight(fight.id)}

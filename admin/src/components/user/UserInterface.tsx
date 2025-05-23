@@ -12,6 +12,7 @@ import {
   Paper
 } from '@mui/material';
 import { FightProvider } from '../../context/FightContext';
+import { useTranslation } from '../../hooks/useTranslation';
 import CurrentFights from './CurrentFights';
 import PastFights from './PastFights';
 
@@ -39,6 +40,7 @@ const UserInterface: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { t } = useTranslation();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -55,7 +57,7 @@ const UserInterface: React.FC = () => {
                 component="h1"
                 sx={{ flexGrow: 1, fontWeight: 500 }}
               >
-                Fight Schedule
+                {t('userInterface.title')}
               </Typography>
             </Toolbar>
             <Paper elevation={0} square>
@@ -73,8 +75,8 @@ const UserInterface: React.FC = () => {
                   }
                 }}
               >
-                <Tab label="Current Fights" />
-                <Tab label="Past Fights" />
+                <Tab label={t('navigation.currentFights')} />
+                <Tab label={t('navigation.pastFights')} />
               </Tabs>
             </Paper>
           </Container>

@@ -20,6 +20,7 @@ import {
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { useTranslation } from '../hooks/useTranslation';
 import api from '../services/api';
 import type { FightCreate } from '../services/api';
 
@@ -153,6 +154,7 @@ const AddFightDialog: React.FC<AddFightDialogProps> = ({ open, onClose, totalFig
 };
 
 const ImportFights: React.FC = () => {
+  const { t } = useTranslation();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [addFightOpen, setAddFightOpen] = useState(false);
@@ -282,13 +284,13 @@ const ImportFights: React.FC = () => {
 
       <Paper elevation={3} sx={{ p: 3, m: 2 }}>
         <Typography variant="h5" gutterBottom>
-          Set Start Time
+          {t('import.setStartTime.title')}
         </Typography>
         <Box sx={{ mb: 2 }}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <Stack direction="row" spacing={2} alignItems="center">
               <TimePicker
-                label="First Fight Start Time"
+                label={t('import.setStartTime.field')}
                 value={startTime}
                 onChange={(newValue) => setStartTime(newValue)}
                 ampm={false}
@@ -300,20 +302,22 @@ const ImportFights: React.FC = () => {
                 onClick={handleSetStartTime}
                 disabled={!startTime || isLoading}
               >
-                Set Start Time
+                {t('import.setStartTime.button')}
               </Button>
             </Stack>
           </LocalizationProvider>
           {isLoading ? (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Loading current start time...
+              {t('import.setStartTime.loading')}
             </Typography>
           ) : startTime && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Current start time: {startTime.toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
+              {t('import.setStartTime.current', {
+                time: startTime.toLocaleTimeString('fr-FR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                })
               })}
             </Typography>
           )}
@@ -322,65 +326,64 @@ const ImportFights: React.FC = () => {
 
       <Paper elevation={3} sx={{ p: 3, m: 2 }}>
         <Typography variant="h5" gutterBottom>
-          Add Fight
+          {t('import.addFight.title')}
         </Typography>
         <Box sx={{ mb: 2 }}>
           <Button
             variant="contained"
             onClick={() => setAddFightOpen(true)}
           >
-            Add New Fight
+            {t('import.addFight.button')}
           </Button>
         </Box>
       </Paper>
 
       <Paper elevation={3} sx={{ p: 3, m: 2 }}>
         <Typography variant="h5" gutterBottom>
-          Import Fights
+          {t('import.importFights.title')}
         </Typography>
-        <Box my={2}>
-          <Typography variant="body1" gutterBottom>
-            Upload a CSV file with the following columns:
-          </Typography>
-          <Typography variant="body2" component="pre" sx={{ backgroundColor: '#f5f5f5', p: 1 }}>
-            fighter_a,fighter_a_club,fighter_b,fighter_b_club,weight_class,duration,fight_type
-          </Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            Example:
-          </Typography>
-          <Typography variant="body2" component="pre" sx={{ backgroundColor: '#f5f5f5', p: 1 }}>
-            Buakaw,Por Pramuk,Masato,K-1,76,15,Muay Thai
-            Saenchai,13 Coins,Pakorn,Por Pramuk,65,15,Boxing
-          </Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            Notes:
-          </Typography>
-          <ul>
-            <Typography variant="body2" component="li">
-              weight_class: Integer representing the weight category in kg (e.g., 76 for 76kg)
-            </Typography>
-            <Typography variant="body2" component="li">
-              duration: Fight duration in minutes
-            </Typography>
-            <Typography variant="body2" component="li">
-              fight_type: Type of fight (Boxing, Muay Thai, Grappling, MMA)
-            </Typography>
-          </ul>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {t('import.importFights.description')}
+        </Typography>
+        <Box component="pre" sx={{
+          backgroundColor: 'grey.100',
+          p: 2,
+          borderRadius: 1,
+          fontSize: '0.875rem',
+          mb: 2
+        }}>
+          {t('import.importFights.example')}
         </Box>
-        <Stack direction="row" spacing={2}>
-          <Button variant="contained" component="label">
-            Upload CSV
-            <input type="file" hidden accept=".csv" onChange={handleFileUpload} />
-          </Button>
-        </Stack>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {t('import.importFights.notes')}
+        </Typography>
+        <Box component="ul" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+          <li>{t('import.importFights.noteWeight')}</li>
+          <li>{t('import.importFights.noteDuration')}</li>
+          <li>{t('import.importFights.noteFightType')}</li>
+        </Box>
+        <Box mt={2}>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+            id="csv-upload"
+          />
+          <label htmlFor="csv-upload">
+            <Button variant="outlined" component="span">
+              {t('import.importFights.uploadButton')}
+            </Button>
+          </label>
+        </Box>
       </Paper>
 
       <Paper elevation={3} sx={{ p: 3, m: 2 }}>
         <Typography variant="h5" gutterBottom color="error">
-          Danger Zone
+          {t('import.dangerZone.title')}
         </Typography>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          These actions cannot be undone. Please be certain.
+          {t('import.dangerZone.description')}
         </Typography>
         <Box mt={2}>
           <Button
@@ -388,7 +391,7 @@ const ImportFights: React.FC = () => {
             color="error"
             onClick={handleClearAll}
           >
-            Clear All Fights
+            {t('import.dangerZone.clearButton')}
           </Button>
         </Box>
       </Paper>

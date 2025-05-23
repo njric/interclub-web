@@ -9,6 +9,7 @@ import LoginPage from './components/auth/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { FightProvider } from './context/FightContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useTranslation } from './hooks/useTranslation';
 import api from './services/api';
 import type { Fight } from './services/api';
 import './App.css';
@@ -37,6 +38,7 @@ function TabPanel(props: TabPanelProps) {
 function AdminPanel() {
   const [currentTab, setCurrentTab] = useState(0);
   const { logout } = useAuth();
+  const { t } = useTranslation();
   const [fights, setFights] = useState<Fight[]>([]);
 
   useEffect(() => {
@@ -84,14 +86,14 @@ function AdminPanel() {
     <>
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>Interclub Competition Admin</Typography>
-          <Button color="inherit" onClick={logout}>Logout</Button>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>{t('app.title')}</Typography>
+          <Button color="inherit" onClick={logout}>{t('app.logout')}</Button>
         </Toolbar>
       </AppBar>
       <Container maxWidth="lg" sx={{ mt: 4 }}>
         <Tabs value={currentTab} onChange={handleTabChange}>
-          <Tab label="Fight Management" />
-          <Tab label="Import & Settings" />
+          <Tab label={t('navigation.fightManagement')} />
+          <Tab label={t('navigation.importSettings')} />
         </Tabs>
 
         <TabPanel value={currentTab} index={0}>

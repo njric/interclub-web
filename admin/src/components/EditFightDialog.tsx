@@ -9,6 +9,7 @@ import {
   MenuItem,
   Stack
 } from '@mui/material';
+import { useTranslation } from '../hooks/useTranslation';
 import type { Fight, FightCreate } from '../services/api';
 
 interface EditFightDialogProps {
@@ -18,9 +19,16 @@ interface EditFightDialogProps {
   open?: boolean;
 }
 
-const FIGHT_TYPES = ['Boxing', 'Muay Thai', 'Grappling', 'MMA'];
-
 const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSave, open = true }) => {
+  const { t } = useTranslation();
+
+  const FIGHT_TYPES = [
+    { value: 'Boxing', label: t('editFight.fightTypes.boxing') },
+    { value: 'Muay Thai', label: t('editFight.fightTypes.muayThai') },
+    { value: 'Grappling', label: t('editFight.fightTypes.grappling') },
+    { value: 'MMA', label: t('editFight.fightTypes.mma') }
+  ];
+
   const [formData, setFormData] = useState({
     fighter_a: fight.fighter_a,
     fighter_a_club: fight.fighter_a_club,
@@ -47,11 +55,11 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
-        <DialogTitle>Edit Fight</DialogTitle>
+        <DialogTitle>{t('editFight.title')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
-              label="Fighter A"
+              label={t('editFight.fields.fighterA')}
               name="fighter_a"
               value={formData.fighter_a}
               onChange={handleChange}
@@ -59,7 +67,7 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               required
             />
             <TextField
-              label="Fighter A Club"
+              label={t('editFight.fields.fighterAClub')}
               name="fighter_a_club"
               value={formData.fighter_a_club}
               onChange={handleChange}
@@ -67,7 +75,7 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               required
             />
             <TextField
-              label="Fighter B"
+              label={t('editFight.fields.fighterB')}
               name="fighter_b"
               value={formData.fighter_b}
               onChange={handleChange}
@@ -75,7 +83,7 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               required
             />
             <TextField
-              label="Fighter B Club"
+              label={t('editFight.fields.fighterBClub')}
               name="fighter_b_club"
               value={formData.fighter_b_club}
               onChange={handleChange}
@@ -83,7 +91,7 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               required
             />
             <TextField
-              label="Weight Class (kg)"
+              label={t('editFight.fields.weightClass')}
               name="weight_class"
               type="number"
               value={formData.weight_class}
@@ -93,7 +101,7 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               inputProps={{ min: 1 }}
             />
             <TextField
-              label="Duration (minutes)"
+              label={t('editFight.fields.duration')}
               name="duration"
               type="number"
               value={formData.duration}
@@ -103,7 +111,7 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               inputProps={{ min: 1, max: 60 }}
             />
             <TextField
-              label="Fight Type"
+              label={t('editFight.fields.fightType')}
               name="fight_type"
               select
               value={formData.fight_type}
@@ -112,16 +120,16 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               required
             >
               {FIGHT_TYPES.map(type => (
-                <MenuItem key={type} value={type}>
-                  {type}
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
                 </MenuItem>
               ))}
             </TextField>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained">Save</Button>
+          <Button onClick={onClose}>{t('editFight.buttons.cancel')}</Button>
+          <Button type="submit" variant="contained">{t('editFight.buttons.save')}</Button>
         </DialogActions>
       </form>
     </Dialog>

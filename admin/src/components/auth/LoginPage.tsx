@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -17,6 +18,7 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +26,7 @@ const LoginPage: React.FC = () => {
       await login(username, password);
       navigate('/admin');
     } catch (err) {
-      setError('Invalid username or password');
+      setError(t('login.errorInvalid'));
     }
   };
 
@@ -33,13 +35,13 @@ const LoginPage: React.FC = () => {
       <Box sx={{ mt: 8 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom align="center">
-            Admin Login
+            {t('login.title')}
           </Typography>
           <form onSubmit={handleSubmit}>
             <Box sx={{ mb: 2 }}>
               <TextField
                 fullWidth
-                label="Username"
+                label={t('login.username')}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -49,7 +51,7 @@ const LoginPage: React.FC = () => {
               <TextField
                 fullWidth
                 type="password"
-                label="Password"
+                label={t('login.password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -67,7 +69,7 @@ const LoginPage: React.FC = () => {
               type="submit"
               size="large"
             >
-              Login
+              {t('login.loginButton')}
             </Button>
           </form>
         </Paper>
