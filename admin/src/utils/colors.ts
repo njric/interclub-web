@@ -29,16 +29,22 @@ const clubColorMap = new Map<string, string>();
 let nextColorIndex = 0;
 
 // Function to get a consistent and unique color for a club name
-export const getClubColor = (clubName: string): string => {
-  // If club already has a color, return it
-  if (clubColorMap.has(clubName)) {
-    return clubColorMap.get(clubName)!;
+export const getClubColor = (club: string): string => {
+  // Add club-specific colors if needed
+  return '#666666';
+};
+
+export const getFightTypeColor = (fightType: string): string => {
+  switch (fightType) {
+    case 'Boxing':
+      return '#1976d2'; // Blue
+    case 'Muay Thai':
+      return '#d32f2f'; // Red
+    case 'Grappling':
+      return '#388e3c'; // Green
+    case 'MMA':
+      return '#7b1fa2'; // Purple
+    default:
+      return '#1976d2'; // Default blue
   }
-
-  // Assign next available color
-  const color = colorPalette[nextColorIndex % colorPalette.length];
-  clubColorMap.set(clubName, color);
-  nextColorIndex++;
-
-  return color;
 };

@@ -1,39 +1,15 @@
 import React from 'react';
-import { Paper, Typography, Stack, Chip } from '@mui/material';
+import { Paper, Stack, Typography, Chip } from '@mui/material';
+import { formatTime } from '../../utils/time';
 import type { Fight } from '../../services/api';
-import { getClubColor } from '../../utils/colors';
+import { getClubColor, getFightTypeColor } from '../../utils/colors';
 
 interface FightCardProps {
   fight: Fight;
   showStatus?: boolean;
 }
 
-// Fight type color mapping
-const getFightTypeColor = (fightType: string): string => {
-  switch (fightType) {
-    case 'Boxing':
-      return '#1976d2'; // Blue
-    case 'Muay Thai':
-      return '#d32f2f'; // Red
-    case 'Grappling':
-      return '#388e3c'; // Green
-    case 'MMA':
-      return '#7b1fa2'; // Purple
-    default:
-      return '#1976d2'; // Default blue
-  }
-};
-
 const FightCard: React.FC<FightCardProps> = ({ fight, showStatus }) => {
-  const formatTime = (time: string | undefined | null): string => {
-    if (!time) return '-';
-    return new Date(time).toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-  };
-
   return (
     <Paper
       elevation={3}

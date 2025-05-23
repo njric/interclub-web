@@ -195,6 +195,20 @@ const api = {
       throw error;
     }
   },
+
+  // Delete a fight
+  deleteFight: async (fightId: string): Promise<void> => {
+    try {
+      await axios.delete(`${API_URL}/fights/${fightId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+    } catch (error: any) {
+      console.error('API Error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
 };
 
 export default api;

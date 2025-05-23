@@ -644,3 +644,30 @@ async def add_fight(
             status_code=500,
             detail=f"Failed to add fight: {str(e)}"
         )
+
+@router.delete("/{fight_id}", response_model=dict)
+async def delete_fight(
+    fight_id: str,
+    db: Session = Depends(get_db),
+    _: dict = Depends(verify_token)  # Add auth requirement
+):
+    """Delete a specific fight"""
+    try:
+        fight = db.query(Fight).filter(Fight.id == fight_id).first()
+        if not fight:
+            raise HTTPException(status_code=404, detail="Fight not found")
+
+        if fight.actual_start:
+            raise HTTPException(status_code=400, detail="Cannot delete a fight that has already started")
+
+        # Delete the fight
+        db.delete(fight)
+        db.commit()
+
+        return {"message": "Fight deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

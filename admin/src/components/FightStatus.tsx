@@ -1,19 +1,10 @@
 import React from 'react';
 import { Paper, Typography, Box, Stack, Chip } from '@mui/material';
 import { useFightContext } from '../context/FightContext';
+import { formatTime } from '../utils/time';
 
 const FightStatus: React.FC = () => {
   const { ongoingFight, readyFight } = useFightContext();
-
-  const formatTime = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-  };
 
   return (
     <Stack spacing={2}>
