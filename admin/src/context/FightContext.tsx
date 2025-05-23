@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import type { Fight } from '../services/api';
 import api from '../services/api';
 
@@ -35,17 +35,39 @@ export const FightProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Initial load
+  // Initial load and timer setup
   React.useEffect(() => {
-    refreshFightStatus();
+    let isMounted = true;
 
-    // Refresh every 30 seconds
-    const interval = window.setInterval(refreshFightStatus, 30000);
-    return () => window.clearInterval(interval);
-  }, [refreshFightStatus]);
+    const loadData = async () => {
+      if (!isMounted) return;
+      await refreshFightStatus();
+    };
+
+    // Initial load
+    loadData();
+
+    // Refresh every 60 seconds (increased from 30)
+    const interval = window.setInterval(() => {
+      if (isMounted) {
+        loadData();
+      }
+    }, 60000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, []); // No dependencies to prevent recreation
+
+  const contextValue = useMemo(() => ({
+    ongoingFight,
+    readyFight,
+    refreshFightStatus
+  }), [ongoingFight, readyFight, refreshFightStatus]);
 
   return (
-    <FightContext.Provider value={{ ongoingFight, readyFight, refreshFightStatus }}>
+    <FightContext.Provider value={contextValue}>
       {children}
     </FightContext.Provider>
   );

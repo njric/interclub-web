@@ -1,5 +1,5 @@
-import React from 'react';
-import { Typography, Box, Stack, useTheme, useMediaQuery, CircularProgress } from '@mui/material';
+import React, { useCallback, useMemo } from 'react';
+import { Typography, Box, Stack, useTheme, useMediaQuery, CircularProgress, Alert } from '@mui/material';
 import { useFightContext } from '../../context/FightContext';
 import { useTranslation } from '../../hooks/useTranslation';
 import FightCard from './FightCard';
@@ -14,31 +14,77 @@ const CurrentFights: React.FC = () => {
   const [nextFights, setNextFights] = React.useState<Fight[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [lastUpdate, setLastUpdate] = React.useState<Date | null>(null);
+
+  // Use useRef to store the timer interval
+  const intervalRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
+    let isMounted = true;
+
     const loadNextFights = async () => {
+      if (!isMounted) return;
+
       try {
         setIsLoading(true);
-        const fights = await api.getNextFights(100); // Get all upcoming fights
-        // The API already filters out ongoing and ready fights, so we don't need to filter again
-        setNextFights(fights);
         setError(null);
+        const fights = await api.getNextFights(100);
+
+        if (isMounted) {
+          setNextFights(fights);
+          setLastUpdate(new Date());
+        }
       } catch (error) {
         console.error('Error loading next fights:', error);
-        setError(t('currentFights.errorLoading'));
+        if (isMounted) {
+          setError('Erreur lors du chargement des prochains combats. Veuillez réessayer plus tard.');
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
+    // Initial load
     loadNextFights();
 
-    // Refresh every 30 seconds
-    const interval = setInterval(loadNextFights, 30000);
-    return () => clearInterval(interval);
-  }, [t]); // Removed readyFight and ongoingFight dependencies since API handles the filtering
+    // Set up interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
 
-  const SectionTitle: React.FC<{ title: string; highlight?: boolean }> = ({ title, highlight }) => (
+    intervalRef.current = setInterval(() => {
+      if (isMounted) {
+        loadNextFights();
+      }
+    }, 60000);
+
+    return () => {
+      isMounted = false;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []); // No dependencies to prevent recreation
+
+  const handleManualRefresh = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const fights = await api.getNextFights(100);
+      setNextFights(fights);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Manual refresh - Error loading next fights:', error);
+      setError('Erreur lors du chargement des prochains combats. Veuillez réessayer plus tard.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const SectionTitle: React.FC<{ title: string; highlight?: boolean }> = React.memo(({ title, highlight }) => (
     <Typography
       variant={isMobile ? "h6" : "h5"}
       gutterBottom
@@ -50,7 +96,41 @@ const CurrentFights: React.FC = () => {
     >
       {title}
     </Typography>
-  );
+  ));
+
+  const nextFightsContent = useMemo(() => {
+    if (isLoading) {
+      return (
+        <Box display="flex" justifyContent="center" p={3}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    if (error) {
+      return (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      );
+    }
+
+    if (nextFights.length === 0) {
+      return (
+        <Typography color="text.secondary">
+          {t('currentFights.noUpcoming')}
+        </Typography>
+      );
+    }
+
+    return (
+      <Stack spacing={2}>
+        {nextFights.map((fight) => (
+          <FightCard key={`next-${fight.id}`} fight={fight} showStatus />
+        ))}
+      </Stack>
+    );
+  }, [isLoading, error, nextFights, t]);
 
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto', p: 2 }}>
@@ -58,7 +138,7 @@ const CurrentFights: React.FC = () => {
       <Box mb={4}>
         <SectionTitle title={t('currentFights.ongoingFight')} highlight={true} />
         {ongoingFight ? (
-          <FightCard fight={ongoingFight} showStatus />
+          <FightCard key={`ongoing-${ongoingFight.id}`} fight={ongoingFight} showStatus />
         ) : (
           <Typography color="text.secondary">{t('currentFights.noOngoing')}</Typography>
         )}
@@ -68,7 +148,7 @@ const CurrentFights: React.FC = () => {
       <Box mb={4}>
         <SectionTitle title={t('currentFights.readyFight')} />
         {readyFight ? (
-          <FightCard fight={readyFight} showStatus />
+          <FightCard key={`ready-${readyFight.id}`} fight={readyFight} showStatus />
         ) : (
           <Typography color="text.secondary">{t('currentFights.noReady')}</Typography>
         )}
@@ -77,23 +157,7 @@ const CurrentFights: React.FC = () => {
       {/* Next Fights Section */}
       <Box mb={4}>
         <SectionTitle title={t('currentFights.nextFights')} />
-        {isLoading ? (
-          <Box display="flex" justifyContent="center" p={3}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Typography color="error">{error}</Typography>
-        ) : (
-          <Stack spacing={2}>
-            {nextFights.length > 0 ? (
-              nextFights.map(fight => (
-                <FightCard key={fight.id} fight={fight} showStatus />
-              ))
-            ) : (
-              <Typography color="text.secondary">{t('currentFights.noUpcoming')}</Typography>
-            )}
-          </Stack>
-        )}
+        {nextFightsContent}
       </Box>
     </Box>
   );

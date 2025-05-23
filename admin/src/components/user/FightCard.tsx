@@ -9,7 +9,7 @@ interface FightCardProps {
   showStatus?: boolean;
 }
 
-const FightCard: React.FC<FightCardProps> = ({ fight, showStatus }) => {
+const FightCard: React.FC<FightCardProps> = React.memo(({ fight, showStatus }) => {
   return (
     <Paper
       elevation={3}
@@ -75,6 +75,8 @@ const FightCard: React.FC<FightCardProps> = ({ fight, showStatus }) => {
       </Stack>
     </Paper>
   );
-};
+});
+
+FightCard.displayName = 'FightCard';
 
 export default FightCard;

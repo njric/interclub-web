@@ -11,7 +11,6 @@ import {
   Container,
   Paper
 } from '@mui/material';
-import { FightProvider } from '../../context/FightContext';
 import { useTranslation } from '../../hooks/useTranslation';
 import CurrentFights from './CurrentFights';
 import PastFights from './PastFights';
@@ -47,53 +46,51 @@ const UserInterface: React.FC = () => {
   };
 
   return (
-    <FightProvider>
-      <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="fixed" color="default" elevation={0}>
-          <Container maxWidth="lg" disableGutters>
-            <Toolbar>
-              <Typography
-                variant={isMobile ? "h6" : "h5"}
-                component="h1"
-                sx={{ flexGrow: 1, fontWeight: 500 }}
-              >
-                {t('userInterface.title')}
-              </Typography>
-            </Toolbar>
-            <Paper elevation={0} square>
-              <Tabs
-                value={currentTab}
-                onChange={handleTabChange}
-                variant="fullWidth"
-                indicatorColor="primary"
-                textColor="primary"
-                sx={{
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                  '& .MuiTab-root': {
-                    fontSize: isMobile ? '0.875rem' : '1rem',
-                  }
-                }}
-              >
-                <Tab label={t('navigation.currentFights')} />
-                <Tab label={t('navigation.pastFights')} />
-              </Tabs>
-            </Paper>
-          </Container>
-        </AppBar>
+    <Box sx={{ flexGrow: 1 }}>
+      <AppBar position="fixed" color="default" elevation={0}>
+        <Container maxWidth="lg" disableGutters>
+          <Toolbar>
+            <Typography
+              variant={isMobile ? "h6" : "h5"}
+              component="h1"
+              sx={{ flexGrow: 1, fontWeight: 500 }}
+            >
+              {t('userInterface.title')}
+            </Typography>
+          </Toolbar>
+          <Paper elevation={0} square>
+            <Tabs
+              value={currentTab}
+              onChange={handleTabChange}
+              variant="fullWidth"
+              indicatorColor="primary"
+              textColor="primary"
+              sx={{
+                borderBottom: 1,
+                borderColor: 'divider',
+                '& .MuiTab-root': {
+                  fontSize: isMobile ? '0.875rem' : '1rem',
+                }
+              }}
+            >
+              <Tab label={t('navigation.currentFights')} />
+              <Tab label={t('navigation.pastFights')} />
+            </Tabs>
+          </Paper>
+        </Container>
+      </AppBar>
 
-        {/* Add toolbar spacing */}
-        <Toolbar />
-        <Box mt={7}>
-          <TabPanel value={currentTab} index={0}>
-            <CurrentFights />
-          </TabPanel>
-          <TabPanel value={currentTab} index={1}>
-            <PastFights />
-          </TabPanel>
-        </Box>
+      {/* Add toolbar spacing */}
+      <Toolbar />
+      <Box mt={7}>
+        <TabPanel value={currentTab} index={0}>
+          <CurrentFights />
+        </TabPanel>
+        <TabPanel value={currentTab} index={1}>
+          <PastFights />
+        </TabPanel>
       </Box>
-    </FightProvider>
+    </Box>
   );
 };
 
