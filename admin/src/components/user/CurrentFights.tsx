@@ -20,12 +20,8 @@ const CurrentFights: React.FC = () => {
       try {
         setIsLoading(true);
         const fights = await api.getNextFights(100); // Get all upcoming fights
-        // Filter out both the ready fight and ongoing fight
-        const filteredFights = fights.filter(fight =>
-          (!readyFight || fight.id !== readyFight.id) &&
-          (!ongoingFight || fight.id !== ongoingFight.id)
-        );
-        setNextFights(filteredFights);
+        // The API already filters out ongoing and ready fights, so we don't need to filter again
+        setNextFights(fights);
         setError(null);
       } catch (error) {
         console.error('Error loading next fights:', error);
@@ -40,7 +36,7 @@ const CurrentFights: React.FC = () => {
     // Refresh every 30 seconds
     const interval = setInterval(loadNextFights, 30000);
     return () => clearInterval(interval);
-  }, [readyFight, ongoingFight, t]);
+  }, [t]); // Removed readyFight and ongoingFight dependencies since API handles the filtering
 
   const SectionTitle: React.FC<{ title: string; highlight?: boolean }> = ({ title, highlight }) => (
     <Typography

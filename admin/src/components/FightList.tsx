@@ -261,9 +261,10 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
       const start = new Date(fight.actual_start);
       const end = new Date(fight.actual_end);
       const duration = Math.floor((end.getTime() - start.getTime()) / 60000);
-      return `${duration} min`;
+      // Only show duration if it's greater than 0, otherwise show nothing
+      return duration > 0 ? `${duration} ${t('common.min')}` : '';
     }
-    return `${fight.duration} min`;
+    return `${fight.duration} ${t('common.min')}`;
   };
 
   return (

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Request
 from sqlalchemy.orm import Session
 import csv
 import io
@@ -276,6 +276,20 @@ async def get_next_fights(limit: int = 5, db: Session = Depends(get_db)):
 
         next_fights = next_fights_query.order_by(Fight.expected_start).limit(limit).all()
         return next_fights
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/past", response_model=List[FightSchema])
+async def get_past_fights(limit: int = 10, db: Session = Depends(get_db)):
+    """Get completed fights ordered by completion time (most recent first)"""
+    try:
+        past_fights = db.query(Fight).filter(
+            Fight.is_completed == True,
+            Fight.actual_end.isnot(None)
+        ).order_by(Fight.actual_end.desc()).limit(limit).all()
+
+        return past_fights
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -19,7 +19,11 @@ def get_db():
     finally:
         db.close()
 
-# Create tables
+# Create tables only if they don't exist (preserves data)
+def create_tables():
+    Base.metadata.create_all(bind=engine)
+
+# Recreate tables (for development/testing only - deletes all data!)
 def recreate_tables():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
