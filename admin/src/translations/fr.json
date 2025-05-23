@@ -1,0 +1,185 @@
+{
+  "app": {
+    "title": "Interclub Competition Admin",
+    "logout": "Logout"
+  },
+  "navigation": {
+    "fightManagement": "Combats",
+    "importSettings": "Imports & Réglages",
+    "currentFights": "Combat en cours",
+    "pastFights": "Combats terminés"
+  },
+  "login": {
+    "title": "Admin Login",
+    "username": "Username",
+    "password": "Password",
+    "loginButton": "Login",
+    "errorInvalid": "Invalid username or password"
+  },
+  "fightList": {
+    "title": "Liste des combats",
+    "updatingOrder": "Mise à jour de l'ordre des combats...",
+    "tableHeaders": {
+      "fightNumber": "Combat #",
+      "fighterA": "Coin Rouge",
+      "fighterB": "Coin Bleu",
+      "weight": "Poids",
+      "type": "Discipline",
+      "expectedStart": "Heure prévue",
+      "duration": "Durée",
+      "actions": "Actions"
+    },
+    "actions": {
+      "startFight": "Démarrer le combat",
+      "endFight": "Terminer le combat",
+      "editFight": "Modifier le combat",
+      "deleteFight": "Supprimer le combat",
+      "changeFightNumber": "Changer le numéro du combat"
+    },
+    "tooltips": {
+      "cannotReorderCompleted": "Impossible de réorganiser les combats terminés",
+      "cannotReorderOngoing": "Impossible de réorganiser le combat en cours",
+      "cannotReorderNextReady": "Impossible de réorganiser le prochain combat prêt",
+      "noFightsForReordering": "Aucun combat disponible pour réorganiser",
+      "cannotReorderBeforeNext": "Impossible de réorganiser les combats avant le prochain combat disponible"
+    },
+    "errors": {
+      "loading": "Erreur lors du chargement des combats. Veuillez réessayer.",
+      "starting": "Erreur lors du démarrage du combat. Veuillez réessayer.",
+      "ending": "Erreur lors de la fin du combat. Veuillez réessayer.",
+      "cancelling": "Erreur lors de la suppression du combat. Veuillez réessayer.",
+      "updating": "Erreur lors de la mise à jour du combat. Veuillez réessayer.",
+      "updatingNumber": "Erreur lors de la mise à jour du numéro du combat. Veuillez réessayer.",
+      "deleting": "Erreur lors de la suppression du combat. Veuillez réessayer."
+    }
+  },
+  "editFight": {
+    "title": "Modifier le combat",
+    "fields": {
+      "fighterA": "Coin Rouge",
+      "fighterAClub": "Club du Coin Rouge",
+      "fighterB": "Coin Bleu",
+      "fighterBClub": "Club du Coin Bleu",
+      "weightClass": "Poids (kg)",
+      "duration": "Durée (minutes)",
+      "fightType": "Discipline"
+    },
+    "fightTypes": {
+      "boxing": "Boxe",
+      "muayThai": "Muay Thai",
+      "grappling": "Grappling",
+      "mma": "MMA"
+    },
+    "buttons": {
+      "cancel": "Annuler",
+      "save": "Enregistrer"
+    }
+  },
+  "editFightNumber": {
+    "title": "Changer le numéro du combat",
+    "field": "Nouveau numéro de combat",
+    "buttons": {
+      "cancel": "Annuler",
+      "save": "Enregistrer"
+    }
+  },
+  "cancelFight": {
+    "title": "Annuler le combat",
+    "message": "Êtes-vous sûr de vouloir annuler le combat entre {fighterA} ({clubA}) et {fighterB} ({clubB})? Cette action ne peut pas être annulée.",
+    "buttons": {
+      "keep": "Non, Conserver le combat",
+      "cancel": "Oui, Annuler le combat"
+    }
+  },
+  "addFight": {
+    "title": "Ajouter un nouveau combat",
+    "fields": {
+      "fighterA": "Coin Rouge",
+      "fighterAClub": "Club du Coin Rouge",
+      "fighterB": "Coin Bleu",
+      "fighterBClub": "Club du Coin Bleu",
+      "weightClass": "Poids (kg)",
+      "duration": "Durée (minutes)",
+      "fightType": "Discipline",
+      "position": "Position"
+    },
+    "positionHelper": "Enter a number between 1 and {max}",
+    "buttons": {
+      "cancel": "Annuler",
+      "add": "Ajouter le combat"
+    }
+  },
+  "fightStatus": {
+    "ongoingFight": "Combat en cours",
+    "readyFight": "Combat prêt",
+    "noOngoing": "Aucun combat en cours",
+    "noReady": "Aucun combat prêt",
+    "expectedStart": "Heure prévue:"
+  },
+  "currentFights": {
+    "ongoingFight": "Combat en cours",
+    "readyFight": "Combat prêt",
+    "nextFights": "Prochains combats",
+    "noOngoing": "Aucun combat en cours",
+    "noReady": "Aucun combat prêt",
+    "noUpcoming": "Aucun combat à venir",
+    "errorLoading": "Erreur lors du chargement des prochains combats. Veuillez réessayer plus tard."
+  },
+  "pastFights": {
+    "title": "Combats terminés",
+    "noPastFights": "Aucun combat terminé disponible",
+    "errorLoading": "Erreur lors du chargement des combats terminés. Veuillez réessayer plus tard."
+  },
+  "fightCard": {
+    "vs": "vs",
+    "minutesShort": "min"
+  },
+  "import": {
+    "title": "Import & Gestion de la base de données",
+    "setStartTime": {
+      "title": "Définir l'heure de début",
+      "field": "Heure de début du premier combat",
+      "button": "Définir l'heure de début",
+      "loading": "Chargement de l'heure de début actuelle...",
+      "current": "Heure de début actuelle: {time}",
+      "errorSelect": "Veuillez sélectionner une heure de début",
+      "success": "Heure de début définie avec succès. Actualisation de la page pour afficher les heures mises à jour...",
+      "error": "Erreur lors de la définition de l'heure de début: {error}"
+    },
+    "addFight": {
+      "title": "Ajouter un combat",
+      "button": "Ajouter un nouveau combat"
+    },
+    "importFights": {
+      "title": "Import des combats",
+      "description": "Téléchargez un fichier CSV avec les colonnes suivantes:",
+      "example": "Exemple:",
+      "notes": "Notes:",
+      "noteWeight": "weight_class: Integer représentant la catégorie de poids en kg (e.g., 76 pour 76kg)",
+      "noteDuration": "duration: Durée du combat en minutes",
+      "noteFightType": "fight_type: Type de combat (Boxing, Muay Thai, Grappling, MMA)",
+      "uploadButton": "Télécharger le fichier CSV",
+      "success": "Combats importés avec succès: {count}",
+      "error": "Erreur lors de l'import des combats ({status}): {detail}. Veuillez vérifier le format de votre fichier CSV et réessayer."
+    },
+    "dangerZone": {
+      "title": "Zone dangereuse",
+      "description": "Ces actions ne peuvent pas être annulées. Veuillez être certain.",
+      "clearButton": "Effacer tous les combats",
+      "confirmClear": "Êtes-vous sûr de vouloir effacer tous les combats? Cette action ne peut pas être annulée.",
+      "clearSuccess": "Tous les combats ont été effacés avec succès",
+      "clearError": "Erreur lors de l'effacement des combats ({status}): {detail}"
+    }
+  },
+  "userInterface": {
+    "title": "Planification des combats"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "kg": "kg",
+    "min": "min",
+    "unknownError": "Erreur inconnue"
+  }
+}

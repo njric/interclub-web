@@ -651,8 +651,9 @@ async def delete_fight(
     db: Session = Depends(get_db),
     _: dict = Depends(verify_token)  # Add auth requirement
 ):
-    """Delete a specific fight"""
+    """Delete a specific fight and adjust subsequent fight numbers and times"""
     try:
+        # Get the fight to delete
         fight = db.query(Fight).filter(Fight.id == fight_id).first()
         if not fight:
             raise HTTPException(status_code=404, detail="Fight not found")
@@ -660,14 +661,40 @@ async def delete_fight(
         if fight.actual_start:
             raise HTTPException(status_code=400, detail="Cannot delete a fight that has already started")
 
+        # Get all subsequent fights before deletion
+        subsequent_fights = db.query(Fight).filter(
+            Fight.fight_number > fight.fight_number
+        ).order_by(Fight.fight_number).all()
+
+        # Update fight numbers for subsequent fights
+        for subsequent_fight in subsequent_fights:
+            subsequent_fight.fight_number -= 1
+
         # Delete the fight
         db.delete(fight)
-        db.commit()
+
+        # Update times for all remaining fights
+        first_fight = db.query(Fight).order_by(Fight.fight_number).first()
+        if first_fight and first_fight.expected_start:
+            update_fight_times(db, first_fight.expected_start)
+
+        try:
+            db.commit()
+        except Exception as commit_error:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to commit changes: {str(commit_error)}"
+            )
 
         return {"message": "Fight deleted successfully"}
 
     except HTTPException:
+        db.rollback()
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete fight: {str(e)}"
+        )

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database.database import recreate_tables
-from .routers import fights
+from .routers import fights, auth
 from .utils.config import ALLOWED_ORIGINS
 
 app = FastAPI(title="Fight Manager API")
@@ -18,6 +18,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(fights.router)
+app.include_router(auth.router)
 
 # Create tables on startup
 recreate_tables()
