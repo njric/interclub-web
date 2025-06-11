@@ -53,7 +53,7 @@ const AddFightDialog: React.FC<AddFightDialogProps> = ({ open, onClose, totalFig
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+  const handleChange = (e: any) => {
     const { name, value } = e.target;
     setNewFight(prev => ({
       ...prev,

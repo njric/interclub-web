@@ -50,7 +50,7 @@ import { default as DialogCancelFight } from './CancelFightDialog';
 
 interface FightListProps {
   fights: Fight[];
-  onDragEnd?: () => void;
+  onDragEnd?: (result: any) => Promise<void>;
   onDelete?: (id: string) => void;
   onUpdate?: () => void;
 }

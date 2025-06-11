@@ -80,7 +80,7 @@ interclub-web/
 
 ### Prérequis
 - Python 3.9+
-- Node.js 18+
+- Node.js 20+
 - npm ou yarn
 
 ### 1. Cloner le repository

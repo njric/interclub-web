@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import frTranslations from '../translations/fr.json';
 
 type TranslationKey = string;
@@ -9,12 +9,12 @@ interface UseTranslationReturn {
 }
 
 export const useTranslation = (): UseTranslationReturn => {
-  const [translations, setTranslations] = useState<any>(frTranslations);
-  const [isLoading, setIsLoading] = useState(false);
+  const translations = frTranslations;
+  const isLoading = false;
 
   const t = (key: TranslationKey, params?: Record<string, string | number>): string => {
     const keys = key.split('.');
-    let value = translations;
+    let value: any = translations;
 
     for (const k of keys) {
       if (value && typeof value === 'object' && k in value) {
@@ -32,7 +32,7 @@ export const useTranslation = (): UseTranslationReturn => {
 
     // Replace parameters in the translation
     if (params) {
-      return value.replace(/{(\w+)}/g, (match, paramKey) => {
+      return value.replace(/{(\w+)}/g, (match: string, paramKey: string) => {
         return params[paramKey]?.toString() || match;
       });
     }

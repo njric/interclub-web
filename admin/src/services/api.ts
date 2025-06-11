@@ -41,6 +41,17 @@ export interface FightCreate {
   position?: number;
 }
 
+export interface FightUpdate {
+  fighter_a?: string;
+  fighter_a_club?: string;
+  fighter_b?: string;
+  fighter_b_club?: string;
+  weight_class?: number;
+  duration?: number;
+  fight_type?: string;
+  is_completed?: boolean;
+}
+
 const api = {
   // Auth endpoints
   login: async (username: string, password: string): Promise<{ token: string }> => {
@@ -182,7 +193,7 @@ const api = {
   },
 
   // Update an existing fight
-  updateFight: async (fightId: string, fight: Omit<FightCreate, 'position'>): Promise<Fight> => {
+  updateFight: async (fightId: string, fight: FightUpdate): Promise<Fight> => {
     try {
       const response = await axios.patch(`${API_URL}/fights/${fightId}`, fight, {
         headers: {

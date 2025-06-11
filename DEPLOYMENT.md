@@ -50,14 +50,14 @@ echo 'alias python3=python3.11' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-### 2.2 Installation de Node.js 18+
+### 2.2 Installation de Node.js 20+
 ```bash
 # Installation via NodeSource
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Vérifier les versions
-node --version  # doit être 18+
+node --version  # doit être 20+
 npm --version
 ```
 
@@ -173,8 +173,8 @@ chmod 600 .env
 # Toujours en tant qu'utilisateur interclub
 cd /opt/interclub/app/admin
 
-# Installer les dépendances
-npm install --production
+# Installer toutes les dépendances (devDependencies nécessaires pour le build)
+npm install
 
 # Créer le fichier de configuration
 cat > .env.production << EOF
