@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from contextlib import contextmanager
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./fights.db"
 
@@ -13,6 +14,15 @@ Base = declarative_base()
 
 # Dependency to get database session
 def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Context manager for database session (used in deployment scripts)
+@contextmanager
+def get_db_session():
     db = SessionLocal()
     try:
         yield db
