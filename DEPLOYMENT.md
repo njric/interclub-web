@@ -390,6 +390,14 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 with get_db_session() as db:
+    # Supprimer l'utilisateur admin s'il existe déjà
+    existing_admin = db.query(User).filter(User.username == "admin").first()
+    
+    if existing_admin:
+        db.delete(existing_admin)
+        print("Ancien utilisateur admin supprimé")
+    
+    # Créer le nouvel utilisateur admin
     admin_user = User(
         username="admin",
         hashed_password=pwd_context.hash("votre_mot_de_passe_admin")
