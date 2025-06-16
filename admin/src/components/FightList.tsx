@@ -292,7 +292,9 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
             </TableRow>
           </TableHead>
           <TableBody>
-            {(fightsState || []).map((fight) => (
+            {(fightsState || [])
+              .sort((a, b) => a.fight_number - b.fight_number)
+              .map((fight) => (
               <TableRow key={fight.id} hover>
                 <TableCell>
                   <Stack direction="row" spacing={1} alignItems="center">
