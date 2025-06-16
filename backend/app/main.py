@@ -1,9 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 from .database.database import create_tables
 from .routers import fights, auth
 from .utils.config import ALLOWED_ORIGINS
+
+# Forcer le fuseau horaire local
+os.environ['TZ'] = 'Europe/Paris'
 
 app = FastAPI(title="Fight Manager API")
 
