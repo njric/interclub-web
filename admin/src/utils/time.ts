@@ -1,6 +1,13 @@
 export const formatTime = (time: string | null | undefined): string => {
   if (!time) return '-';
-  return new Date(time).toLocaleTimeString('en-GB', {
+  
+  // Créer un objet Date à partir de la chaîne
+  const date = new Date(time);
+  
+  // Si la date ne contient pas d'information de fuseau horaire,
+  // JavaScript l'interprète comme heure locale
+  // Sinon, toLocaleTimeString() convertit automatiquement vers l'heure locale
+  return date.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
