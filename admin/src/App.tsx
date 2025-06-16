@@ -90,7 +90,7 @@ function AdminPanel() {
           <Button color="inherit" onClick={logout}>{t('app.logout')}</Button>
         </Toolbar>
       </AppBar>
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Container maxWidth="lg" sx={{ mt: 4, px: { xs: 1, sm: 2 } }}>
         <Tabs value={currentTab} onChange={handleTabChange}>
           <Tab label={t('navigation.fightManagement')} />
           <Tab label={t('navigation.importSettings')} />

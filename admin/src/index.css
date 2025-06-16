@@ -30,6 +30,33 @@ body {
   min-height: 100vh;
 }
 
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  body {
+    place-items: stretch;
+  }
+  
+  /* Ensure full width on mobile */
+  .MuiContainer-root {
+    max-width: 100% !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  
+  /* Make table responsive */
+  .MuiTableContainer-root {
+    margin-left: -8px;
+    margin-right: -8px;
+    width: calc(100% + 16px);
+  }
+  
+  /* Compact table cells on mobile */
+  .MuiTableCell-root {
+    padding: 8px 4px !important;
+    font-size: 0.8rem;
+  }
+}
+
 h1 {
   font-size: 3.2em;
   line-height: 1.1;

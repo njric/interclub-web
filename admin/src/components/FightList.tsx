@@ -277,18 +277,18 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
           {t('fightList.updatingOrder')}
         </Alert>
       )}
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+        <Table sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow>
-              <TableCell>{t('fightList.tableHeaders.fightNumber')}</TableCell>
-              <TableCell>{t('fightList.tableHeaders.fighterA')}</TableCell>
-              <TableCell>{t('fightList.tableHeaders.fighterB')}</TableCell>
-              <TableCell>{t('fightList.tableHeaders.weight')}</TableCell>
-              <TableCell>{t('fightList.tableHeaders.type')}</TableCell>
-              <TableCell>{t('fightList.tableHeaders.expectedStart')}</TableCell>
-              <TableCell>{t('fightList.tableHeaders.duration')}</TableCell>
-              <TableCell>{t('fightList.tableHeaders.actions')}</TableCell>
+              <TableCell sx={{ minWidth: 60 }}>{t('fightList.tableHeaders.fightNumber')}</TableCell>
+              <TableCell sx={{ minWidth: 150 }}>{t('fightList.tableHeaders.fighterA')}</TableCell>
+              <TableCell sx={{ minWidth: 150 }}>{t('fightList.tableHeaders.fighterB')}</TableCell>
+              <TableCell sx={{ minWidth: 80 }}>{t('fightList.tableHeaders.weight')}</TableCell>
+              <TableCell sx={{ minWidth: 80 }}>{t('fightList.tableHeaders.type')}</TableCell>
+              <TableCell sx={{ minWidth: 120 }}>{t('fightList.tableHeaders.expectedStart')}</TableCell>
+              <TableCell sx={{ minWidth: 80 }}>{t('fightList.tableHeaders.duration')}</TableCell>
+              <TableCell sx={{ minWidth: 120 }}>{t('fightList.tableHeaders.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
