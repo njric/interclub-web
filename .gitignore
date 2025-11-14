@@ -46,6 +46,14 @@ fight-manager-admin/yarn-error.log*
 .env.local
 .env.*.local
 
+# Environment-specific files (keep templates, ignore actual configs)
+admin/.env.development
+admin/.env.preprod
+admin/.env.production
+backend/.env.development
+backend/.env.preprod
+backend/.env.production
+
 # IDE specific files
 .idea/
 .vscode/
