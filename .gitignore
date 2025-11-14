@@ -61,3 +61,8 @@ backend/.env.production
 *.swo
 .DS_Store
 Thumbs.db
+
+# Claude specific files
+AUDIT_INDEX.md
+CLAUDE.md
+HARDCODED_URLS_AUDIT.md
