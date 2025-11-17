@@ -144,14 +144,14 @@ source /opt/interclub/env/bin/activate
 pip install --upgrade pip
 pip install -e .
 
-# Créer le fichier de configuration production
+# Copier le template de configuration
+cp .env.example .env
+
+# Éditer le fichier de configuration production
+# OU créer directement avec les bonnes valeurs:
 cat > .env << EOF
 # Base de données PostgreSQL
 DATABASE_URL=postgresql://fightuser:votre_mot_de_passe_securise@localhost/fightdb
-
-# Authentification (générer une clé sécurisée)
-SECRET_KEY=$(openssl rand -base64 32)
-ACCESS_TOKEN_EXPIRE_MINUTES=60
 
 # CORS - remplacer par votre domaine
 ALLOWED_ORIGINS=https://votre-domaine.com,https://www.votre-domaine.com
@@ -160,8 +160,11 @@ ALLOWED_ORIGINS=https://votre-domaine.com,https://www.votre-domaine.com
 FIGHT_DURATION_BUFFER_MINUTES=2
 MAX_DURATION_MINUTES=60
 
-# Mode production
-ENVIRONMENT=production
+# Authentification - CHANGEZ CES VALEURS EN PRODUCTION
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=votre_mot_de_passe_admin_securise
+JWT_SECRET=$(openssl rand -hex 32)
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 EOF
 
 # Sécuriser le fichier .env
@@ -176,10 +179,13 @@ cd /opt/interclub/app/admin
 # Installer toutes les dépendances (devDependencies nécessaires pour le build)
 npm install
 
-# Créer le fichier de configuration
-cat > .env.production << EOF
+# Copier le template et créer le fichier de configuration
+cp .env.example .env
+
+# Éditer le fichier de configuration pour la production
+# IMPORTANT: L'URL doit pointer vers votre API backend via le proxy Nginx
+cat > .env << EOF
 VITE_API_URL=https://votre-domaine.com/api
-VITE_APP_TITLE=Interclub Competition Manager
 EOF
 
 # Build de production
@@ -378,34 +384,31 @@ sudo -u interclub -i
 cd /opt/interclub/app/backend
 source /opt/interclub/env/bin/activate
 
-# Les tables sont créées automatiquement au démarrage
-# Créer le premier utilisateur admin via l'API ou directement en base
+# Les tables sont créées automatiquement au démarrage de l'application
+# Les identifiants admin sont configurés dans le fichier .env:
+# - ADMIN_USERNAME
+# - ADMIN_PASSWORD
 
-# Option 1: Via script Python
+# Vérifier que les tables sont créées
 python3 << EOF
-from app.database.database import get_db_session
-from app.models.user import User
-from passlib.context import CryptContext
+from app.database.database import engine, Base
+from app.models.fight import Fight
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Créer les tables si elles n'existent pas
+Base.metadata.create_all(bind=engine)
+print("Tables créées/vérifiées avec succès")
 
-with get_db_session() as db:
-    # Supprimer l'utilisateur admin s'il existe déjà
-    existing_admin = db.query(User).filter(User.username == "admin").first()
-    
-    if existing_admin:
-        db.delete(existing_admin)
-        print("Ancien utilisateur admin supprimé")
-    
-    # Créer le nouvel utilisateur admin
-    admin_user = User(
-        username="admin",
-        hashed_password=pwd_context.hash("votre_mot_de_passe_admin")
-    )
-    db.add(admin_user)
-    db.commit()
-    print("Utilisateur admin créé")
+# Vérifier la connexion
+from sqlalchemy import text
+with engine.connect() as conn:
+    result = conn.execute(text("SELECT COUNT(*) FROM fights"))
+    count = result.scalar()
+    print(f"Nombre de combats en base: {count}")
 EOF
+
+# L'authentification utilise maintenant les variables d'environnement
+# ADMIN_USERNAME et ADMIN_PASSWORD définies dans .env
+# Aucune création d'utilisateur en base n'est nécessaire
 ```
 
 ## Étape 11: Monitoring et Logs
@@ -526,16 +529,16 @@ echo "=== Début du déploiement ==="
 cd /opt/interclub/app
 
 # Pull des dernières modifications
-git pull origin main
+git pull origin master
 
 # Backend
 cd backend
 source /opt/interclub/env/bin/activate
 pip install -e .
 
-# Frontend
+# Frontend (npm install sans --production car devDependencies nécessaires pour le build)
 cd ../admin
-npm install --production
+npm install
 npm run build
 
 # Redémarrage des services
@@ -583,12 +586,15 @@ sudo tail -f /var/log/nginx/interclub_error.log
 
 ## Sécurité Recommandations
 
-1. **Changez tous les mots de passe par défaut**
-2. **Configurez fail2ban pour protéger SSH**
-3. **Mettez à jour régulièrement le système**
-4. **Surveillez les logs d'accès**
-5. **Limitez les connexions SSH par clé publique uniquement**
-6. **Configurez un monitoring externe (Uptime Robot, etc.)**
+1. **Changez tous les mots de passe par défaut** (ADMIN_PASSWORD, JWT_SECRET, DATABASE_URL)
+2. **Utilisez des secrets forts** (minimum 32 caractères pour JWT_SECRET)
+3. **Configurez fail2ban pour protéger SSH**
+4. **Mettez à jour régulièrement le système**
+5. **Surveillez les logs d'accès**
+6. **Limitez les connexions SSH par clé publique uniquement**
+7. **Configurez un monitoring externe (Uptime Robot, etc.)**
+8. **Sécurisez le fichier .env** (chmod 600, propriété interclub)
+9. **Consultez ENVIRONMENT_SETUP.md** pour le guide complet de configuration
 
 ## Maintenance Régulière
 
