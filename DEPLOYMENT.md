@@ -116,6 +116,7 @@ sudo chown -R interclub:interclub /opt/interclub
 ```bash
 # Donner les permissions nécessaires
 sudo usermod -a -G www-data interclub
+sudo usermod -s /bin/bash interclub
 ```
 
 ## Étape 5: Déploiement de l'Application
@@ -586,15 +587,12 @@ sudo tail -f /var/log/nginx/interclub_error.log
 
 ## Sécurité Recommandations
 
-1. **Changez tous les mots de passe par défaut** (ADMIN_PASSWORD, JWT_SECRET, DATABASE_URL)
-2. **Utilisez des secrets forts** (minimum 32 caractères pour JWT_SECRET)
-3. **Configurez fail2ban pour protéger SSH**
-4. **Mettez à jour régulièrement le système**
-5. **Surveillez les logs d'accès**
-6. **Limitez les connexions SSH par clé publique uniquement**
-7. **Configurez un monitoring externe (Uptime Robot, etc.)**
-8. **Sécurisez le fichier .env** (chmod 600, propriété interclub)
-9. **Consultez ENVIRONMENT_SETUP.md** pour le guide complet de configuration
+1. **Changez tous les mots de passe par défaut**
+2. **Configurez fail2ban pour protéger SSH**
+3. **Mettez à jour régulièrement le système**
+4. **Surveillez les logs d'accès**
+5. **Limitez les connexions SSH par clé publique uniquement**
+6. **Configurez un monitoring externe (Uptime Robot, etc.)**
 
 ## Maintenance Régulière
 
