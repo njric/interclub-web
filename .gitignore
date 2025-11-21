@@ -53,6 +53,10 @@ admin/.env.production
 backend/.env.development
 backend/.env.preprod
 backend/.env.production
+backend/.env.deploy
+
+# Generated deployment files
+deployment/nginx.conf
 
 # IDE specific files
 .idea/

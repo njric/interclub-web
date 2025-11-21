@@ -170,6 +170,13 @@ EOF
 
 # Sécuriser le fichier .env
 chmod 600 .env
+
+# Créer le fichier de configuration de déploiement
+cp .env.deploy.example .env.deploy
+
+# Éditer .env.deploy avec vos valeurs de production
+nano .env.deploy
+# Configurer: DOMAIN, DOMAIN_WWW, BACKEND_HOST, BACKEND_PORT, BACKEND_WORKERS, SSL paths
 ```
 
 ### 5.3 Configuration Frontend
@@ -183,10 +190,10 @@ npm install
 # Copier le template et créer le fichier de configuration
 cp .env.example .env
 
-# Éditer le fichier de configuration pour la production
-# IMPORTANT: L'URL doit pointer vers votre API backend via le proxy Nginx
+# Charger les variables de déploiement et créer le .env frontend
+source ../backend/.env.deploy
 cat > .env << EOF
-VITE_API_URL=https://votre-domaine.com/api
+VITE_API_URL=https://${DOMAIN}/api
 EOF
 
 # Build de production
@@ -200,34 +207,12 @@ ls -la dist/
 
 ### 6.1 Service Backend
 ```bash
-sudo tee /etc/systemd/system/interclub-backend.service << EOF
-[Unit]
-Description=Interclub Backend API
-After=network.target postgresql.service
-Requires=postgresql.service
+# Copier le template du service systemd
+sudo cp /opt/interclub/app/deployment/interclub-backend.service.template /etc/systemd/system/interclub-backend.service
 
-[Service]
-Type=simple
-User=interclub
-Group=interclub
-WorkingDirectory=/opt/interclub/app/backend
-Environment=PATH=/opt/interclub/env/bin
-ExecStart=/opt/interclub/env/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
-Restart=always
-RestartSec=3
-StandardOutput=journal
-StandardError=journal
-
-# Sécurité
-NoNewPrivileges=yes
-PrivateTmp=yes
-ProtectSystem=strict
-ReadWritePaths=/opt/interclub
-ProtectHome=yes
-
-[Install]
-WantedBy=multi-user.target
-EOF
+# Le service charge automatiquement les variables depuis:
+# - /opt/interclub/app/backend/.env (variables d'application)
+# - /opt/interclub/app/backend/.env.deploy (variables de déploiement: BACKEND_HOST, BACKEND_PORT, BACKEND_WORKERS)
 ```
 
 ### 6.2 Activation du service backend
@@ -248,72 +233,17 @@ sudo journalctl -u interclub-backend.service -f
 
 ## Étape 7: Configuration Nginx
 
-### 7.1 Configuration du Virtual Host
+### 7.1 Génération de la configuration Nginx depuis le template
 ```bash
-sudo tee /etc/nginx/sites-available/interclub << EOF
-server {
-    listen 80;
-    server_name votre-domaine.com www.votre-domaine.com;
+# Donner les permissions d'exécution au script de génération
+chmod +x /opt/interclub/app/deployment/generate-nginx-config.sh
 
-    # Redirection vers HTTPS
-    return 301 https://\$server_name\$request_uri;
-}
+# Générer la configuration Nginx depuis le template
+# Le script utilise les variables de .env.deploy (DOMAIN, BACKEND_HOST, BACKEND_PORT, SSL paths)
+sudo -u interclub /opt/interclub/app/deployment/generate-nginx-config.sh
 
-server {
-    listen 443 ssl http2;
-    server_name votre-domaine.com www.votre-domaine.com;
-
-    # Certificats SSL (à configurer avec Let's Encrypt)
-    ssl_certificate /etc/letsencrypt/live/votre-domaine.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/votre-domaine.com/privkey.pem;
-
-    # Configuration SSL moderne
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-
-    # Headers de sécurité
-    add_header X-Frame-Options DENY;
-    add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-    # Racine du site (Frontend React)
-    root /opt/interclub/app/admin/dist;
-    index index.html;
-
-    # Gestion des routes React (SPA)
-    location / {
-        try_files \$uri \$uri/ /index.html;
-
-        # Cache pour les assets statiques
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)\$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
-    }
-
-    # Proxy vers l'API Backend
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-
-    # Logs
-    access_log /var/log/nginx/interclub_access.log;
-    error_log /var/log/nginx/interclub_error.log;
-}
-EOF
+# Copier la configuration générée vers Nginx
+sudo cp /opt/interclub/app/deployment/nginx.conf /etc/nginx/sites-available/interclub
 ```
 
 ### 7.2 Activation du site
