@@ -21,6 +21,7 @@ dependencies = [
     "pyjwt>=2.8.0",
     "psycopg2-binary>=2.9.9",  # For PostgreSQL support
     "pytest>=7.4.4",
+    "email-validator>=2.1.0",
     "httpx>=0.26.0",  # For testing
 ]
 requires-python = ">=3.9"
