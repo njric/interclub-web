@@ -48,33 +48,41 @@ if ! [[ "${env_vars[BACKEND_PORT]}" =~ ^[0-9]+$ ]] || \
     exit 1
 fi
 
-# Valider les certificats SSL s'ils sont spécifiés
-if [ -n "${env_vars[SSL_CERT_PATH]:-}" ]; then
-    if [ ! -f "${env_vars[SSL_CERT_PATH]}" ]; then
-        echo "Error: SSL certificate not found at ${env_vars[SSL_CERT_PATH]}" >&2
-        exit 1
-    fi
-    if [ ! -r "${env_vars[SSL_CERT_PATH]}" ]; then
-        echo "Error: SSL certificate is not readable" >&2
-        exit 1
-    fi
+# Construire les chemins SSL depuis DOMAIN si non spécifiés
+if [ -z "${env_vars[SSL_CERT_PATH]:-}" ]; then
+    env_vars[SSL_CERT_PATH]="/etc/letsencrypt/live/${env_vars[DOMAIN]}/fullchain.pem"
 fi
 
-if [ -n "${env_vars[SSL_KEY_PATH]:-}" ]; then
-    if [ ! -f "${env_vars[SSL_KEY_PATH]}" ]; then
-        echo "Error: SSL private key not found at ${env_vars[SSL_KEY_PATH]}" >&2
-        exit 1
-    fi
-    if [ ! -r "${env_vars[SSL_KEY_PATH]}" ]; then
-        echo "Error: SSL private key is not readable" >&2
-        exit 1
-    fi
-    # Vérifier que la clé privée a des permissions restrictives
-    key_perms=$(stat -c '%a' "${env_vars[SSL_KEY_PATH]}")
-    if [ "$key_perms" != "600" ] && [ "$key_perms" != "400" ]; then
-        echo "Warning: SSL private key has insecure permissions ($key_perms)" >&2
-        echo "Recommended: chmod 600 ${env_vars[SSL_KEY_PATH]}" >&2
-    fi
+if [ -z "${env_vars[SSL_KEY_PATH]:-}" ]; then
+    env_vars[SSL_KEY_PATH]="/etc/letsencrypt/live/${env_vars[DOMAIN]}/privkey.pem"
+fi
+
+# Valider les certificats SSL
+if [ ! -f "${env_vars[SSL_CERT_PATH]}" ]; then
+    echo "Error: SSL certificate not found at ${env_vars[SSL_CERT_PATH]}" >&2
+    exit 1
+fi
+
+if [ ! -r "${env_vars[SSL_CERT_PATH]}" ]; then
+    echo "Error: SSL certificate is not readable" >&2
+    exit 1
+fi
+
+if [ ! -f "${env_vars[SSL_KEY_PATH]}" ]; then
+    echo "Error: SSL private key not found at ${env_vars[SSL_KEY_PATH]}" >&2
+    exit 1
+fi
+
+if [ ! -r "${env_vars[SSL_KEY_PATH]}" ]; then
+    echo "Error: SSL private key is not readable" >&2
+    exit 1
+fi
+
+# Vérifier que la clé privée a des permissions restrictives
+key_perms=$(stat -c '%a' "${env_vars[SSL_KEY_PATH]}")
+if [ "$key_perms" != "600" ] && [ "$key_perms" != "400" ]; then
+    echo "Warning: SSL private key has insecure permissions ($key_perms)" >&2
+    echo "Recommended: chmod 600 ${env_vars[SSL_KEY_PATH]}" >&2
 fi
 
 # Générer la configuration de manière sécurisée
