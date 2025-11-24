@@ -19,6 +19,7 @@ from ..utils.auth import verify_token
 
 router = APIRouter(prefix="/fights", tags=["fights"])
 
+@router.get("", response_model=List[FightSchema])
 @router.get("/", response_model=List[FightSchema])
 async def list_fights(db: Session = Depends(get_db)):
     try:

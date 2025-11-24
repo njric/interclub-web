@@ -9,7 +9,7 @@ from .utils.config import ALLOWED_ORIGINS
 # Forcer le fuseau horaire local
 os.environ['TZ'] = 'Europe/Paris'
 
-app = FastAPI(title="Fight Manager API")
+app = FastAPI(title="Fight Manager API", redirect_slashes=False)
 
 # Configure CORS with environment variable
 app.add_middleware(
