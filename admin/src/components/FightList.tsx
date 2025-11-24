@@ -144,7 +144,12 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
   const loadFights = async (force = false) => {
     try {
       const response = await api.getFights();
-      setFightsState(response);
+      if (Array.isArray(response)) {
+        setFightsState(response);
+      } else {
+        console.error('API returned non-array response:', response);
+        setFightsState([]);
+      }
       setIsUpdating(false);
     } catch (error) {
       handleError(error, 'Error loading fights. Please try again.');
