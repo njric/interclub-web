@@ -97,7 +97,7 @@ export SSL_CERT_PATH="${env_vars[SSL_CERT_PATH]:-}"
 export SSL_KEY_PATH="${env_vars[SSL_KEY_PATH]:-}"
 
 envsubst '${DOMAIN} ${DOMAIN_WWW} ${BACKEND_HOST} ${BACKEND_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' \
-    < "$TEMPLATE" > "$TEMP_CONF"
+    < "$TEMPLATE" | sed 's/\$\$/$/g' > "$TEMP_CONF"
 
 # Backup et déplacement atomique
 [ -f "$OUTPUT" ] && cp "$OUTPUT" "${OUTPUT}.backup"
