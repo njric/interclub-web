@@ -503,10 +503,21 @@ async def update_fight_number(
         # Update the target fight's number
         fight.fight_number = new_number
 
-        # Update expected start times for all fights
-        first_fight = db.query(Fight).order_by(Fight.fight_number).first()
-        if first_fight and first_fight.expected_start:
-            update_fight_times(db, first_fight.expected_start)
+        # Update expected start times for fights after ongoing/ready
+        if ongoing_fight:
+            # If there's an ongoing fight, calculate next time slot after it
+            from datetime import timedelta
+            from ..utils.config import FIGHT_DURATION_BUFFER_MINUTES
+            next_time = ongoing_fight.actual_start + timedelta(
+                minutes=ongoing_fight.duration + FIGHT_DURATION_BUFFER_MINUTES
+            )
+            # Only update fights after the ongoing one
+            update_fight_times(db, next_time, min_fight_number=ongoing_fight.fight_number + 1)
+        else:
+            # No ongoing fight, recalculate all from the start
+            first_fight = db.query(Fight).order_by(Fight.fight_number).first()
+            if first_fight and first_fight.expected_start:
+                update_fight_times(db, first_fight.expected_start)
 
         db.commit()
 
