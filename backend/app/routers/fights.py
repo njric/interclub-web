@@ -295,6 +295,7 @@ async def get_past_fights(limit: int = 10, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.delete("", response_model=dict)
 @router.delete("/", response_model=dict)
 async def clear_all_fights(db: Session = Depends(get_db)):
     """Clear all fights from the database"""
