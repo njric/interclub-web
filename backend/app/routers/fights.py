@@ -223,15 +223,15 @@ async def get_ready_fight(db: Session = Depends(get_db)):
         if ongoing_fight:
             # Get the next non-completed fight after the ongoing one
             ready_fight = db.query(Fight).filter(
-                Fight.expected_start > ongoing_fight.expected_start,
+                Fight.fight_number > ongoing_fight.fight_number,
                 Fight.is_completed == False
-            ).order_by(Fight.expected_start).first()
+            ).order_by(Fight.fight_number).first()
         else:
             # If no ongoing fight, get the next non-completed fight
             ready_fight = db.query(Fight).filter(
                 Fight.is_completed == False,
                 Fight.actual_start.is_(None)
-            ).order_by(Fight.expected_start).first()
+            ).order_by(Fight.fight_number).first()
 
         return ready_fight
 
@@ -251,14 +251,14 @@ async def get_next_fights(limit: int = 5, db: Session = Depends(get_db)):
         ready_fight = None
         if ongoing_fight:
             ready_fight = db.query(Fight).filter(
-                Fight.expected_start > ongoing_fight.expected_start,
+                Fight.fight_number > ongoing_fight.fight_number,
                 Fight.is_completed == False
-            ).order_by(Fight.expected_start).first()
+            ).order_by(Fight.fight_number).first()
         else:
             ready_fight = db.query(Fight).filter(
                 Fight.is_completed == False,
                 Fight.actual_start.is_(None)
-            ).order_by(Fight.expected_start).first()
+            ).order_by(Fight.fight_number).first()
 
         # Get next fights excluding ongoing and ready fights
         next_fights_query = db.query(Fight).filter(
@@ -268,14 +268,14 @@ async def get_next_fights(limit: int = 5, db: Session = Depends(get_db)):
 
         if ongoing_fight:
             next_fights_query = next_fights_query.filter(
-                Fight.expected_start > ongoing_fight.expected_start
+                Fight.fight_number > ongoing_fight.fight_number
             )
         if ready_fight:
             next_fights_query = next_fights_query.filter(
                 Fight.id != ready_fight.id
             )
 
-        next_fights = next_fights_query.order_by(Fight.expected_start).limit(limit).all()
+        next_fights = next_fights_query.order_by(Fight.fight_number).limit(limit).all()
         return next_fights
 
     except Exception as e:
@@ -441,14 +441,14 @@ async def update_fight_number(
         ready_fight = None
         if ongoing_fight:
             ready_fight = db.query(Fight).filter(
-                Fight.expected_start > ongoing_fight.expected_start,
+                Fight.fight_number > ongoing_fight.fight_number,
                 Fight.is_completed == False
-            ).order_by(Fight.expected_start).first()
+            ).order_by(Fight.fight_number).first()
         else:
             ready_fight = db.query(Fight).filter(
                 Fight.is_completed == False,
                 Fight.actual_start.is_(None)
-            ).order_by(Fight.expected_start).first()
+            ).order_by(Fight.fight_number).first()
 
         # Get the lowest fight number that can be modified
         # This will be the fight after the ready fight
@@ -541,14 +541,14 @@ async def add_fight(
         ready_fight = None
         if ongoing_fight:
             ready_fight = db.query(Fight).filter(
-                Fight.expected_start > ongoing_fight.expected_start,
+                Fight.fight_number > ongoing_fight.fight_number,
                 Fight.is_completed == False
-            ).order_by(Fight.expected_start).first()
+            ).order_by(Fight.fight_number).first()
         else:
             ready_fight = db.query(Fight).filter(
                 Fight.is_completed == False,
                 Fight.actual_start.is_(None)
-            ).order_by(Fight.expected_start).first()
+            ).order_by(Fight.fight_number).first()
 
         # Get the lowest fight number that can be modified
         # This will be the fight after the ready fight
@@ -625,7 +625,7 @@ async def add_fight(
         # Now update all expected start times for fights after the ongoing/ready fight
         if ongoing_fight:
             subsequent_fights = db.query(Fight).filter(
-                Fight.expected_start > ongoing_fight.expected_start,
+                Fight.fight_number > ongoing_fight.fight_number,
                 Fight.id != ongoing_fight.id
             ).order_by(Fight.fight_number).all()
         else:
