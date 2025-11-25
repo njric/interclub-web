@@ -1,6 +1,7 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, field_serializer
 from typing import Optional
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 class FightBase(BaseModel):
     fighter_a: str
@@ -64,6 +65,15 @@ class Fight(FightBase):
     actual_start: Optional[datetime] = None
     actual_end: Optional[datetime] = None
     is_completed: bool = False
+
+    @field_serializer('expected_start', 'actual_start', 'actual_end')
+    def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:
+        if value is None:
+            return None
+        # If datetime is naive (no timezone), assume Europe/Paris
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=ZoneInfo('Europe/Paris'))
+        return value.isoformat()
 
     class Config:
         from_attributes = True
