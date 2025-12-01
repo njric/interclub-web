@@ -56,14 +56,11 @@ function AdminPanel() {
   const handleDragEnd = async (result: any) => {
     if (!result.destination) return;
 
-    const items = Array.from(fights);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    setFights(items);
-
     try {
-      await api.updateFightNumber(reorderedItem.id, result.destination.index + 1);
+      const fightId = fights[result.source.index].id;
+      const newPosition = result.destination.index + 1;
+      const updatedFights = await api.updateFightNumber(fightId, newPosition);
+      setFights(updatedFights);
     } catch (error) {
       console.error('Error updating fight order:', error);
     }
