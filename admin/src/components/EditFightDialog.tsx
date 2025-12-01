@@ -110,7 +110,8 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               onChange={handleChange}
               fullWidth
               required
-              inputProps={{ min: 1, max: 60 }}
+              inputProps={{ min: 0.5, max: 60, step: 0.5 }}
+              helperText="Decimals allowed (e.g., 1.5 for 1min30)"
             />
             <TextField
               label={t('editFight.fields.nbRounds') || 'Number of Rounds'}
@@ -130,7 +131,8 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               onChange={handleChange}
               fullWidth
               required
-              inputProps={{ min: 0, max: 10 }}
+              inputProps={{ min: 0, max: 10, step: 0.5 }}
+              helperText="Decimals allowed (e.g., 0.5 for 30sec)"
             />
             <TextField
               label={t('editFight.fields.fightType')}

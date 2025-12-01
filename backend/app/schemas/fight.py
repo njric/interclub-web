@@ -9,9 +9,9 @@ class FightBase(BaseModel):
     fighter_b: str
     fighter_b_club: str
     weight_class: int
-    round_duration: int  # duration of one round in minutes
+    round_duration: float  # duration of one round in minutes (supports decimals like 1.5)
     nb_rounds: int  # number of rounds
-    rest_time: int  # rest time between rounds in minutes
+    rest_time: float  # rest time between rounds in minutes (supports decimals)
     fight_type: str
 
     @field_validator('round_duration')
@@ -47,9 +47,9 @@ class FightUpdate(BaseModel):
     fighter_b: Optional[str] = None
     fighter_b_club: Optional[str] = None
     weight_class: Optional[int] = None
-    round_duration: Optional[int] = None
+    round_duration: Optional[float] = None
     nb_rounds: Optional[int] = None
-    rest_time: Optional[int] = None
+    rest_time: Optional[float] = None
     fight_type: Optional[str] = None
 
     @field_validator('fighter_a', 'fighter_b', 'fighter_a_club', 'fighter_b_club')
@@ -98,7 +98,7 @@ class Fight(FightBase):
 
     @computed_field
     @property
-    def duration(self) -> int:
+    def duration(self) -> float:
         """Calculate total fight duration: nb_rounds * round_duration + (nb_rounds - 1) * rest_time"""
         return self.nb_rounds * self.round_duration + (self.nb_rounds - 1) * self.rest_time
 

@@ -117,7 +117,8 @@ const AddFightDialog: React.FC<AddFightDialogProps> = ({ open, onClose, totalFig
             onChange={handleChange}
             required
             fullWidth
-            inputProps={{ min: 1, max: 60 }}
+            inputProps={{ min: 0.5, max: 60, step: 0.5 }}
+            helperText="Decimals allowed (e.g., 1.5 for 1min30)"
           />
           <TextField
             name="nb_rounds"
@@ -137,7 +138,8 @@ const AddFightDialog: React.FC<AddFightDialogProps> = ({ open, onClose, totalFig
             onChange={handleChange}
             required
             fullWidth
-            inputProps={{ min: 0, max: 10 }}
+            inputProps={{ min: 0, max: 10, step: 0.5 }}
+            helperText="Decimals allowed (e.g., 0.5 for 30sec)"
           />
           <FormControl fullWidth required>
             <InputLabel id="fight-type-label">Fight Type</InputLabel>

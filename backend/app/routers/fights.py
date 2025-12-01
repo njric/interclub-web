@@ -63,9 +63,9 @@ async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_
 
         for row in reader:
             try:
-                round_duration = int(row["round_duration"])
+                round_duration = float(row["round_duration"])
                 nb_rounds = int(row["nb_rounds"])
-                rest_time = int(row["rest_time"])
+                rest_time = float(row["rest_time"])
                 weight_class = int(row["weight_class"])
 
                 # Validate round_duration

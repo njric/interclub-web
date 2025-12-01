@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Boolean
+from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean
 from sqlalchemy.sql import func
 from datetime import datetime
 
@@ -14,9 +14,9 @@ class Fight(Base):
     fighter_b = Column(String, nullable=False)
     fighter_b_club = Column(String, nullable=False)
     weight_class = Column(Integer, nullable=False)
-    round_duration = Column(Integer, nullable=False)  # duration of one round in minutes
+    round_duration = Column(Float, nullable=False)  # duration of one round in minutes (supports decimals)
     nb_rounds = Column(Integer, nullable=False)  # number of rounds
-    rest_time = Column(Integer, nullable=False)  # rest time between rounds in minutes
+    rest_time = Column(Float, nullable=False)  # rest time between rounds in minutes (supports decimals)
     fight_type = Column(String, nullable=False, default="Muay Thai")
     expected_start = Column(DateTime, nullable=True)
     actual_start = Column(DateTime, nullable=True)
