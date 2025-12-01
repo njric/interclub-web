@@ -317,28 +317,42 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
                   </Stack>
                 </TableCell>
                 <TableCell>
-                  <Stack>
+                  <Stack spacing={0.5}>
                     <span>{fight.fighter_a}</span>
-                    <span style={{ color: getClubColor(fight.fighter_a_club) }}>
-                      {fight.fighter_a_club}
-                    </span>
+                    <Chip
+                      label={fight.fighter_a_club}
+                      size="small"
+                      sx={{
+                        backgroundColor: getClubColor(fight.fighter_a_club),
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.7rem',
+                        height: '20px'
+                      }}
+                    />
                   </Stack>
                 </TableCell>
                 <TableCell>
-                  <Stack>
+                  <Stack spacing={0.5}>
                     <span>{fight.fighter_b}</span>
-                    <span style={{ color: getClubColor(fight.fighter_b_club) }}>
-                      {fight.fighter_b_club}
-                    </span>
+                    <Chip
+                      label={fight.fighter_b_club}
+                      size="small"
+                      sx={{
+                        backgroundColor: getClubColor(fight.fighter_b_club),
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.7rem',
+                        height: '20px'
+                      }}
+                    />
                   </Stack>
                 </TableCell>
                 <TableCell>{fight.weight_class}{t('common.kg')}</TableCell>
                 <TableCell>
-                  <Chip
-                    label={fight.fight_type}
-                    size="small"
-                    color="primary"
-                  />
+                  <Typography variant="body2" color="text.secondary">
+                    {fight.fight_type}
+                  </Typography>
                 </TableCell>
                 <TableCell>{getStartTime(fight)}</TableCell>
                 <TableCell>{getDuration(fight)}</TableCell>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Paper, Stack, Typography, Chip } from '@mui/material';
 import { formatTime } from '../../utils/time';
 import type { Fight } from '../../services/api';
-import { getClubColor, getFightTypeColor } from '../../utils/colors';
+import { getClubColor } from '../../utils/colors';
 
 interface FightCardProps {
   fight: Fight;
@@ -25,30 +25,38 @@ const FightCard: React.FC<FightCardProps> = React.memo(({ fight, showStatus }) =
           Fight #{fight.fight_number} • {formatTime(fight.expected_start)} • {fight.duration} min
         </Typography>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack>
+          <Stack spacing={0.5}>
             <Typography variant="body1" fontWeight="bold">
               {fight.fighter_a}
             </Typography>
-            <Typography
-              variant="body2"
-              sx={{ color: getClubColor(fight.fighter_a_club) }}
-            >
-              {fight.fighter_a_club}
-            </Typography>
+            <Chip
+              label={fight.fighter_a_club}
+              size="small"
+              sx={{
+                backgroundColor: getClubColor(fight.fighter_a_club),
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '0.75rem'
+              }}
+            />
           </Stack>
           <Typography variant="body2" color="text.secondary">
             vs
           </Typography>
-          <Stack alignItems="flex-end">
+          <Stack alignItems="flex-end" spacing={0.5}>
             <Typography variant="body1" fontWeight="bold">
               {fight.fighter_b}
             </Typography>
-            <Typography
-              variant="body2"
-              sx={{ color: getClubColor(fight.fighter_b_club) }}
-            >
-              {fight.fighter_b_club}
-            </Typography>
+            <Chip
+              label={fight.fighter_b_club}
+              size="small"
+              sx={{
+                backgroundColor: getClubColor(fight.fighter_b_club),
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '0.75rem'
+              }}
+            />
           </Stack>
         </Stack>
         <Stack
@@ -61,15 +69,9 @@ const FightCard: React.FC<FightCardProps> = React.memo(({ fight, showStatus }) =
             {fight.weight_class}kg
           </Typography>
           {showStatus && (
-            <Chip
-              label={fight.fight_type}
-              size="small"
-              sx={{
-                backgroundColor: getFightTypeColor(fight.fight_type),
-                color: 'white',
-                fontWeight: 'bold'
-              }}
-            />
+            <Typography variant="body2" color="text.secondary">
+              {fight.fight_type}
+            </Typography>
           )}
         </Stack>
       </Stack>
