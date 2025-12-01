@@ -1,4 +1,4 @@
-import { blue, green, purple, orange, pink, teal, deepOrange, indigo, cyan, lime, amber, brown, blueGrey, red } from '@mui/material/colors';
+import { red } from '@mui/material/colors';
 
 // Simple hash function to generate a consistent number from a string
 const hashString = (str: string): number => {
@@ -18,26 +18,13 @@ export const getClubColor = (club: string): string => {
     return red[700];
   }
 
-  // Color palette for clubs (using Material-UI colors at shade 700 for good contrast)
-  const clubColors = [
-    blue[700],
-    green[700],
-    purple[700],
-    orange[700],
-    pink[700],
-    teal[700],
-    deepOrange[700],
-    indigo[700],
-    cyan[700],
-    lime[800],      // Darker shade for better readability
-    amber[800],     // Darker shade for better readability
-    brown[700],
-    blueGrey[700],
-  ];
+  // Generate a unique hue (0-360) based on club name hash
+  const hash = hashString(club);
+  const hue = hash % 360;
 
-  // Generate a consistent color index based on club name
-  const colorIndex = hashString(club) % clubColors.length;
-  return clubColors[colorIndex];
+  // Use fixed saturation and lightness for good contrast on white background
+  // 65% saturation and 45% lightness gives vibrant, readable colors
+  return `hsl(${hue}, 65%, 45%)`;
 };
 
 export const getFightTypeColor = (fightType: string): string => {
