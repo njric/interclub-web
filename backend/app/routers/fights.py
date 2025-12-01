@@ -212,26 +212,14 @@ async def get_ongoing_fight(db: Session = Depends(get_db)):
 
 @router.get("/ready", response_model=Optional[FightSchema])
 async def get_ready_fight(db: Session = Depends(get_db)):
-    """Get the next fight that should be preparing"""
+    """Get the next fight that should be preparing (first non-started fight in order)"""
     try:
-        # First get the ongoing fight
-        ongoing_fight = db.query(Fight).filter(
-            Fight.actual_start.isnot(None),
-            Fight.actual_end.is_(None)
-        ).first()
-
-        if ongoing_fight:
-            # Get the next non-completed fight after the ongoing one
-            ready_fight = db.query(Fight).filter(
-                Fight.fight_number > ongoing_fight.fight_number,
-                Fight.is_completed == False
-            ).order_by(Fight.fight_number).first()
-        else:
-            # If no ongoing fight, get the next non-completed fight
-            ready_fight = db.query(Fight).filter(
-                Fight.is_completed == False,
-                Fight.actual_start.is_(None)
-            ).order_by(Fight.fight_number).first()
+        # Get the first non-started, non-completed fight in sequential order
+        # This is the next fight to prepare, regardless of which fight is currently ongoing
+        ready_fight = db.query(Fight).filter(
+            Fight.is_completed == False,
+            Fight.actual_start.is_(None)
+        ).order_by(Fight.fight_number).first()
 
         return ready_fight
 
@@ -248,31 +236,22 @@ async def get_next_fights(limit: int = 5, db: Session = Depends(get_db)):
             Fight.actual_end.is_(None)
         ).first()
 
-        ready_fight = None
-        if ongoing_fight:
-            ready_fight = db.query(Fight).filter(
-                Fight.fight_number > ongoing_fight.fight_number,
-                Fight.is_completed == False
-            ).order_by(Fight.fight_number).first()
-        else:
-            ready_fight = db.query(Fight).filter(
-                Fight.is_completed == False,
-                Fight.actual_start.is_(None)
-            ).order_by(Fight.fight_number).first()
+        # Get ready fight (first non-started fight in order)
+        ready_fight = db.query(Fight).filter(
+            Fight.is_completed == False,
+            Fight.actual_start.is_(None)
+        ).order_by(Fight.fight_number).first()
 
-        # Get next fights excluding ongoing and ready fights
+        # Get next fights after the ready fight
         next_fights_query = db.query(Fight).filter(
             Fight.actual_start.is_(None),
             Fight.is_completed == False
         )
 
-        if ongoing_fight:
-            next_fights_query = next_fights_query.filter(
-                Fight.fight_number > ongoing_fight.fight_number
-            )
         if ready_fight:
+            # Show fights that come after the ready fight
             next_fights_query = next_fights_query.filter(
-                Fight.id != ready_fight.id
+                Fight.fight_number > ready_fight.fight_number
             )
 
         next_fights = next_fights_query.order_by(Fight.fight_number).limit(limit).all()
@@ -437,18 +416,11 @@ async def update_fight_number(
             Fight.actual_end.is_(None)
         ).first()
 
-        # Get ready fight (next fight after ongoing or first non-completed if no ongoing)
-        ready_fight = None
-        if ongoing_fight:
-            ready_fight = db.query(Fight).filter(
-                Fight.fight_number > ongoing_fight.fight_number,
-                Fight.is_completed == False
-            ).order_by(Fight.fight_number).first()
-        else:
-            ready_fight = db.query(Fight).filter(
-                Fight.is_completed == False,
-                Fight.actual_start.is_(None)
-            ).order_by(Fight.fight_number).first()
+        # Get ready fight (first non-started fight in order)
+        ready_fight = db.query(Fight).filter(
+            Fight.is_completed == False,
+            Fight.actual_start.is_(None)
+        ).order_by(Fight.fight_number).first()
 
         # Get the lowest fight number that can be modified
         # This will be the fight after the ready fight
@@ -548,18 +520,11 @@ async def add_fight(
             Fight.actual_end.is_(None)
         ).first()
 
-        # Get ready fight (next fight after ongoing or first non-completed if no ongoing)
-        ready_fight = None
-        if ongoing_fight:
-            ready_fight = db.query(Fight).filter(
-                Fight.fight_number > ongoing_fight.fight_number,
-                Fight.is_completed == False
-            ).order_by(Fight.fight_number).first()
-        else:
-            ready_fight = db.query(Fight).filter(
-                Fight.is_completed == False,
-                Fight.actual_start.is_(None)
-            ).order_by(Fight.fight_number).first()
+        # Get ready fight (first non-started fight in order)
+        ready_fight = db.query(Fight).filter(
+            Fight.is_completed == False,
+            Fight.actual_start.is_(None)
+        ).order_by(Fight.fight_number).first()
 
         # Get the lowest fight number that can be modified
         # This will be the fight after the ready fight
