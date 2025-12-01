@@ -173,8 +173,32 @@ npm run lint
 Le système utilise SQLite par défaut pour le développement, avec support PostgreSQL pour la production. Les tables sont créées automatiquement au démarrage.
 
 ### Modèles Principaux
-- **Fight**: Combats avec statut, horaires, participants
-- **User**: Utilisateurs administrateurs avec authentification
+- **Fight**: Combats avec statut, horaires, participants, et détails techniques
+  - `fighter_a`, `fighter_b`: Noms des combattants
+  - `fighter_a_club`, `fighter_b_club`: Clubs des combattants
+  - `weight_class`: Catégorie de poids (kg)
+  - `round_duration`: Durée d'un round en minutes (supporte décimales: 1.5 pour 1min30)
+  - `nb_rounds`: Nombre de rounds
+  - `rest_time`: Temps de repos entre rounds en minutes (supporte décimales: 0.5 pour 30sec)
+  - `fight_type`: Type de combat (Boxing, Muay Thai, Grappling, MMA)
+  - `expected_start`, `actual_start`, `actual_end`: Horaires
+  - `is_completed`: Statut de complétion
+
+### Format CSV pour l'Import
+
+Le système permet l'import de combats via CSV avec le format suivant:
+
+```csv
+fighter_a,fighter_a_club,fighter_b,fighter_b_club,weight_class,round_duration,nb_rounds,rest_time,fight_type
+John Doe,MB FIGHT,Jane Smith,Team Alpha,75,1.5,3,1,Muay Thai
+```
+
+**Notes importantes**:
+- `round_duration` et `rest_time` acceptent les décimales (ex: 1.5 = 1min30, 0.5 = 30sec)
+- `weight_class` doit être un entier (kg)
+- `nb_rounds` doit être entre 1 et 10
+- `fight_type` doit être: Boxing, Muay Thai, Grappling ou MMA
+- Voir `sample_fights.csv` pour des exemples complets
 
 ## API Endpoints
 
