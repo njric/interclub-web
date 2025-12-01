@@ -14,7 +14,9 @@ class Fight(Base):
     fighter_b = Column(String, nullable=False)
     fighter_b_club = Column(String, nullable=False)
     weight_class = Column(Integer, nullable=False)
-    duration = Column(Integer, nullable=False)  # in minutes
+    round_duration = Column(Integer, nullable=False)  # duration of one round in minutes
+    nb_rounds = Column(Integer, nullable=False)  # number of rounds
+    rest_time = Column(Integer, nullable=False)  # rest time between rounds in minutes
     fight_type = Column(String, nullable=False, default="Muay Thai")
     expected_start = Column(DateTime, nullable=True)
     actual_start = Column(DateTime, nullable=True)

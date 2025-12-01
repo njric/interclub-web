@@ -269,7 +269,7 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
       // Only show duration if it's greater than 0, otherwise show nothing
       return duration > 0 ? `${duration} ${t('common.min')}` : '';
     }
-    return `${fight.duration} ${t('common.min')}`;
+    return `${fight.nb_rounds} x ${fight.round_duration}`;
   };
 
   return (

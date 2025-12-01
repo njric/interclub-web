@@ -22,7 +22,7 @@ const FightCard: React.FC<FightCardProps> = React.memo(({ fight, showStatus }) =
     >
       <Stack spacing={1}>
         <Typography variant="body2" color="text.secondary">
-          Fight #{fight.fight_number} • {formatTime(fight.expected_start)} • {fight.duration} min
+          Fight #{fight.fight_number} • {formatTime(fight.expected_start)} • {fight.nb_rounds} x {fight.round_duration}
         </Typography>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack spacing={0.5}>

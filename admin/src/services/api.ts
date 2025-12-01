@@ -22,7 +22,10 @@ export interface Fight {
   fighter_b: string;
   fighter_b_club: string;
   weight_class: number;
-  duration: number;
+  round_duration: number;
+  nb_rounds: number;
+  rest_time: number;
+  duration: number;  // Computed field from backend
   fight_type: string;
   expected_start: string;
   actual_start: string | null;
@@ -36,7 +39,9 @@ export interface FightCreate {
   fighter_b: string;
   fighter_b_club: string;
   weight_class: number;
-  duration: number;
+  round_duration: number;
+  nb_rounds: number;
+  rest_time: number;
   fight_type: string;
   position?: number;
 }
@@ -47,7 +52,9 @@ export interface FightUpdate {
   fighter_b?: string;
   fighter_b_club?: string;
   weight_class?: number;
-  duration?: number;
+  round_duration?: number;
+  nb_rounds?: number;
+  rest_time?: number;
   fight_type?: string;
   is_completed?: boolean;
 }

@@ -37,7 +37,9 @@ const AddFightDialog: React.FC<AddFightDialogProps> = ({ open, onClose, totalFig
     fighter_b: '',
     fighter_b_club: '',
     weight_class: 0,
-    duration: 15,
+    round_duration: 2,
+    nb_rounds: 3,
+    rest_time: 1,
     position: totalFights + 1,
     fight_type: 'Boxing'
   });
@@ -108,13 +110,34 @@ const AddFightDialog: React.FC<AddFightDialogProps> = ({ open, onClose, totalFig
             fullWidth
           />
           <TextField
-            name="duration"
-            label="Duration (minutes)"
+            name="round_duration"
+            label="Round Duration (minutes)"
             type="number"
-            value={newFight.duration}
+            value={newFight.round_duration}
             onChange={handleChange}
             required
             fullWidth
+            inputProps={{ min: 1, max: 60 }}
+          />
+          <TextField
+            name="nb_rounds"
+            label="Number of Rounds"
+            type="number"
+            value={newFight.nb_rounds}
+            onChange={handleChange}
+            required
+            fullWidth
+            inputProps={{ min: 1, max: 10 }}
+          />
+          <TextField
+            name="rest_time"
+            label="Rest Time (minutes)"
+            type="number"
+            value={newFight.rest_time}
+            onChange={handleChange}
+            required
+            fullWidth
+            inputProps={{ min: 0, max: 10 }}
           />
           <FormControl fullWidth required>
             <InputLabel id="fight-type-label">Fight Type</InputLabel>

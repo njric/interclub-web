@@ -41,7 +41,7 @@ async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_
         required_fields = {
             "fighter_a", "fighter_a_club",
             "fighter_b", "fighter_b_club",
-            "weight_class", "duration",
+            "weight_class", "round_duration", "nb_rounds", "rest_time",
             "fight_type"
         }
         if not all(field in reader.fieldnames for field in required_fields):
@@ -63,14 +63,28 @@ async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_
 
         for row in reader:
             try:
-                duration = int(row["duration"])
+                round_duration = int(row["round_duration"])
+                nb_rounds = int(row["nb_rounds"])
+                rest_time = int(row["rest_time"])
                 weight_class = int(row["weight_class"])
 
-                if duration <= 0 or duration > 60:  # MAX_DURATION_MINUTES
+                # Validate round_duration
+                if round_duration <= 0 or round_duration > 60:
+                    continue
+
+                # Validate nb_rounds
+                if nb_rounds <= 0 or nb_rounds > 10:
+                    continue
+
+                # Validate rest_time
+                if rest_time < 0 or rest_time > 10:
                     continue
 
                 if weight_class <= 0:
                     continue
+
+                # Calculate total duration
+                total_duration = nb_rounds * round_duration + (nb_rounds - 1) * rest_time
 
                 fight = Fight(
                     id=str(uuid.uuid4()),
@@ -80,7 +94,9 @@ async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_
                     fighter_b=row["fighter_b"].strip(),
                     fighter_b_club=row["fighter_b_club"].strip(),
                     weight_class=weight_class,
-                    duration=duration,
+                    round_duration=round_duration,
+                    nb_rounds=nb_rounds,
+                    rest_time=rest_time,
                     fight_type=row["fight_type"].strip(),
                     expected_start=start_time,
                     is_completed=False
@@ -88,7 +104,7 @@ async def import_fights(file: UploadFile = File(...), db: Session = Depends(get_
                 db.add(fight)
                 imported_count += 1
                 next_fight_number += 1
-                start_time += timedelta(minutes=duration + 2)  # FIGHT_DURATION_BUFFER_MINUTES
+                start_time += timedelta(minutes=total_duration + 2)  # FIGHT_DURATION_BUFFER_MINUTES
             except (ValueError, KeyError):
                 continue
 

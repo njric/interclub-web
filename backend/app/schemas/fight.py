@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator, field_serializer
+from pydantic import BaseModel, field_validator, field_serializer, computed_field
 from typing import Optional
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -9,13 +9,27 @@ class FightBase(BaseModel):
     fighter_b: str
     fighter_b_club: str
     weight_class: int
-    duration: int
+    round_duration: int  # duration of one round in minutes
+    nb_rounds: int  # number of rounds
+    rest_time: int  # rest time between rounds in minutes
     fight_type: str
 
-    @field_validator('duration')
-    def validate_duration(cls, v):
-        if v <= 0 or v > 60:  # MAX_DURATION_MINUTES
-            raise ValueError("Duration must be between 1 and 60 minutes")
+    @field_validator('round_duration')
+    def validate_round_duration(cls, v):
+        if v <= 0 or v > 60:
+            raise ValueError("Round duration must be between 1 and 60 minutes")
+        return v
+
+    @field_validator('nb_rounds')
+    def validate_nb_rounds(cls, v):
+        if v <= 0 or v > 10:
+            raise ValueError("Number of rounds must be between 1 and 10")
+        return v
+
+    @field_validator('rest_time')
+    def validate_rest_time(cls, v):
+        if v < 0 or v > 10:
+            raise ValueError("Rest time must be between 0 and 10 minutes")
         return v
 
     @field_validator('weight_class')
@@ -33,7 +47,9 @@ class FightUpdate(BaseModel):
     fighter_b: Optional[str] = None
     fighter_b_club: Optional[str] = None
     weight_class: Optional[int] = None
-    duration: Optional[int] = None
+    round_duration: Optional[int] = None
+    nb_rounds: Optional[int] = None
+    rest_time: Optional[int] = None
     fight_type: Optional[str] = None
 
     @field_validator('fighter_a', 'fighter_b', 'fighter_a_club', 'fighter_b_club')
@@ -51,11 +67,25 @@ class FightUpdate(BaseModel):
             raise ValueError("Weight class must be positive")
         return v
 
-    @field_validator('duration')
-    def validate_duration(cls, v):
+    @field_validator('round_duration')
+    def validate_round_duration(cls, v):
         if v is not None:
-            if v <= 0 or v > 60:  # MAX_DURATION_MINUTES
-                raise ValueError("Duration must be between 1 and 60 minutes")
+            if v <= 0 or v > 60:
+                raise ValueError("Round duration must be between 1 and 60 minutes")
+        return v
+
+    @field_validator('nb_rounds')
+    def validate_nb_rounds(cls, v):
+        if v is not None:
+            if v <= 0 or v > 10:
+                raise ValueError("Number of rounds must be between 1 and 10")
+        return v
+
+    @field_validator('rest_time')
+    def validate_rest_time(cls, v):
+        if v is not None:
+            if v < 0 or v > 10:
+                raise ValueError("Rest time must be between 0 and 10 minutes")
         return v
 
 class Fight(FightBase):
@@ -65,6 +95,12 @@ class Fight(FightBase):
     actual_start: Optional[datetime] = None
     actual_end: Optional[datetime] = None
     is_completed: bool = False
+
+    @computed_field
+    @property
+    def duration(self) -> int:
+        """Calculate total fight duration: nb_rounds * round_duration + (nb_rounds - 1) * rest_time"""
+        return self.nb_rounds * self.round_duration + (self.nb_rounds - 1) * self.rest_time
 
     @field_serializer('expected_start', 'actual_start', 'actual_end')
     def serialize_datetime(self, value: Optional[datetime]) -> Optional[str]:

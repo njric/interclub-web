@@ -35,7 +35,9 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
     fighter_b: fight.fighter_b,
     fighter_b_club: fight.fighter_b_club,
     weight_class: fight.weight_class,
-    duration: fight.duration,
+    round_duration: fight.round_duration,
+    nb_rounds: fight.nb_rounds,
+    rest_time: fight.rest_time,
     fight_type: fight.fight_type
   });
 
@@ -43,7 +45,7 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'weight_class' || name === 'duration' ? Number(value) : value
+      [name]: ['weight_class', 'round_duration', 'nb_rounds', 'rest_time'].includes(name) ? Number(value) : value
     }));
   };
 
@@ -101,14 +103,34 @@ const EditFightDialog: React.FC<EditFightDialogProps> = ({ fight, onClose, onSav
               inputProps={{ min: 1 }}
             />
             <TextField
-              label={t('editFight.fields.duration')}
-              name="duration"
+              label={t('editFight.fields.roundDuration') || 'Round Duration (min)'}
+              name="round_duration"
               type="number"
-              value={formData.duration}
+              value={formData.round_duration}
               onChange={handleChange}
               fullWidth
               required
               inputProps={{ min: 1, max: 60 }}
+            />
+            <TextField
+              label={t('editFight.fields.nbRounds') || 'Number of Rounds'}
+              name="nb_rounds"
+              type="number"
+              value={formData.nb_rounds}
+              onChange={handleChange}
+              fullWidth
+              required
+              inputProps={{ min: 1, max: 10 }}
+            />
+            <TextField
+              label={t('editFight.fields.restTime') || 'Rest Time (min)'}
+              name="rest_time"
+              type="number"
+              value={formData.rest_time}
+              onChange={handleChange}
+              fullWidth
+              required
+              inputProps={{ min: 0, max: 10 }}
             />
             <TextField
               label={t('editFight.fields.fightType')}
