@@ -18,9 +18,11 @@ export const getClubColor = (club: string): string => {
     return red[700];
   }
 
-  // Generate a unique hue (0-360) based on club name hash
+  // Use golden ratio angle (137.5°) for better color distribution
+  // This ensures visually distinct colors even for similar hash values
   const hash = hashString(club);
-  const hue = hash % 360;
+  const goldenRatioAngle = 137.508; // Golden angle in degrees
+  const hue = (hash * goldenRatioAngle) % 360;
 
   // Use fixed saturation and lightness for good contrast on white background
   // 65% saturation and 45% lightness gives vibrant, readable colors

@@ -232,8 +232,8 @@ const FightList: React.FC<FightListProps> = ({ fights = [], onDragEnd, onDelete,
 
   const handleUpdateFightNumber = async (fightId: string, newNumber: number) => {
     try {
-      await api.updateFightNumber(fightId, newNumber);
-      await loadFights(true);
+      const updatedFights = await api.updateFightNumber(fightId, newNumber);
+      setFightsState(updatedFights);
       setEditFightNumber(null);
       setError(null);
       onUpdate?.();
