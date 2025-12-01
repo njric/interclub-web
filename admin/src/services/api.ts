@@ -169,6 +169,21 @@ const api = {
     }
   },
 
+  // Refresh fight times (force recalculation)
+  refreshFightTimes: async (): Promise<Fight[]> => {
+    try {
+      const response = await axios.post(`${API_URL}/fights/refresh-times`, null, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('API Error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
   // Set start time for first fight
   setStartTime: async (startTime: string): Promise<{ message: string }> => {
     const response = await axios.post(`${API_URL}/fights/start-time`, {

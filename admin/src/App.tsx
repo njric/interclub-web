@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Container, CssBaseline, AppBar, Toolbar, Typography, Tabs, Tab, Box, Button } from '@mui/material';
+import { Container, CssBaseline, AppBar, Toolbar, Typography, Tabs, Tab, Box, Button, IconButton, Tooltip } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import FightList from './components/FightList';
 import FightStatus from './components/FightStatus';
@@ -79,10 +80,24 @@ function AdminPanel() {
     setCurrentTab(newValue);
   };
 
+  const handleRefreshTimes = async () => {
+    try {
+      const updatedFights = await api.refreshFightTimes();
+      setFights(updatedFights);
+    } catch (error) {
+      console.error('Error refreshing fight times:', error);
+    }
+  };
+
   return (
     <>
       <AppBar position="static">
         <Toolbar>
+          <Tooltip title={t('app.refreshTimes') || 'Recalculer les horaires'}>
+            <IconButton color="inherit" onClick={handleRefreshTimes}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>{t('app.title')}</Typography>
           <Button color="inherit" onClick={logout}>{t('app.logout')}</Button>
         </Toolbar>

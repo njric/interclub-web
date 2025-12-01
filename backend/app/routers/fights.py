@@ -274,6 +274,48 @@ async def get_past_fights(limit: int = 10, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/refresh-times", response_model=List[FightSchema])
+async def refresh_fight_times(db: Session = Depends(get_db), _: dict = Depends(verify_token)):
+    """Force recalculation of all fight expected start times"""
+    try:
+        # Get the first fight to use as reference
+        first_fight = db.query(Fight).order_by(Fight.fight_number).first()
+
+        if not first_fight or not first_fight.expected_start:
+            raise HTTPException(
+                status_code=400,
+                detail="No fights found or first fight has no expected start time"
+            )
+
+        # Check if there's an ongoing fight
+        ongoing_fight = db.query(Fight).filter(
+            Fight.actual_start.isnot(None),
+            Fight.actual_end.is_(None)
+        ).first()
+
+        if ongoing_fight:
+            # If there's an ongoing fight, recalculate from after it
+            from ..utils.config import FIGHT_DURATION_BUFFER_MINUTES
+            next_time = ongoing_fight.actual_start + timedelta(
+                minutes=ongoing_fight.duration + FIGHT_DURATION_BUFFER_MINUTES
+            )
+            update_fight_times(db, next_time, min_fight_number=ongoing_fight.fight_number + 1)
+        else:
+            # No ongoing fight, recalculate all from the first fight's expected start
+            update_fight_times(db, first_fight.expected_start)
+
+        db.commit()
+
+        # Return all fights in order
+        return db.query(Fight).order_by(Fight.fight_number).all()
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to refresh times: {str(e)}")
+
 @router.delete("", response_model=dict)
 @router.delete("/", response_model=dict)
 async def clear_all_fights(db: Session = Depends(get_db)):
