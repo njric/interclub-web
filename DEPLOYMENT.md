@@ -342,6 +342,67 @@ EOF
 # Aucune création d'utilisateur en base n'est nécessaire
 ```
 
+## Étape 10bis: Gestion des Changements de Schéma (Migrations)
+
+### 10bis.1 Comprendre quand une migration est nécessaire
+
+Certains changements de code nécessitent de modifier le schéma de la base de données. C'est le cas notamment pour:
+- Changement de type de colonne (ex: Integer → Float)
+- Ajout/suppression de colonnes
+- Changement de contraintes de clés étrangères
+
+**Important**: SQLAlchemy crée automatiquement les tables au démarrage, mais ne modifie pas les colonnes existantes.
+
+### 10bis.2 Migration avec recréation de la base (méthode simple)
+
+Pour les petits projets ou en cas de changement de type de colonne, la méthode la plus simple est de recréer la base:
+
+```bash
+# 1. Sauvegarder les données existantes (optionnel)
+pg_dump -h localhost -U fightuser -d fightdb > /tmp/backup_avant_migration.sql
+
+# 2. Arrêter le service backend
+sudo systemctl stop interclub-backend.service
+
+# 3. Tuer les connexions actives à la base de données
+sudo -u postgres psql -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'fightdb' AND pid <> pg_backend_pid();"
+
+# 4. Supprimer la base de données
+sudo -u postgres psql -c "DROP DATABASE fightdb;"
+
+# 5. Recréer la base de données
+sudo -u postgres psql -c "CREATE DATABASE fightdb OWNER fightuser;"
+
+# 6. Redémarrer le service (recrée automatiquement les tables avec le nouveau schéma)
+sudo systemctl start interclub-backend.service
+
+# 7. Vérifier que tout fonctionne
+sudo systemctl status interclub-backend.service
+```
+
+### 10bis.3 Exemple: Migration pour le support des décimales
+
+Le support des décimales pour `round_duration` et `rest_time` (permettant 1.5 pour 1min30) nécessite de recréer la base car les colonnes passent de `Integer` à `Float`:
+
+```bash
+# Suivre la procédure 10bis.2 ci-dessus
+# Après redémarrage, vous pourrez importer un CSV avec des valeurs décimales:
+# round_duration=1.5 (pour 1min30)
+# rest_time=0.5 (pour 30sec)
+```
+
+### 10bis.4 Alternative: Restauration depuis une sauvegarde
+
+Si vous avez une sauvegarde à restaurer après la recréation:
+
+```bash
+# Après avoir recréé la base (étapes 1-5 de 10bis.2)
+psql -h localhost -U fightuser -d fightdb < /path/to/backup.sql
+
+# Puis redémarrer le service
+sudo systemctl start interclub-backend.service
+```
+
 ## Étape 11: Monitoring et Logs
 
 ### 11.1 Configuration de la rotation des logs
@@ -446,7 +507,18 @@ ab -n 100 -c 10 https://votre-domaine.com/api/
 
 ## Étape 14: Mise à Jour en Production
 
-### 14.1 Script de déploiement
+### 14.1 Important: Changements de Schéma
+
+**Avant de déployer, vérifier si la mise à jour contient des changements de schéma de base de données.**
+
+Exemples de changements nécessitant une migration:
+- Modification des types de colonnes dans `backend/app/models/fight.py`
+- Ajout/suppression de colonnes
+- Changement de contraintes
+
+➡️ **Si changement de schéma détecté**: Suivre la procédure de l'Étape 10bis avant d'exécuter le script de déploiement.
+
+### 14.2 Script de déploiement
 ```bash
 sudo tee /opt/interclub/deploy.sh << EOF
 #!/bin/bash
@@ -477,6 +549,8 @@ sudo systemctl restart interclub-backend.service
 sudo systemctl reload nginx
 
 echo "=== Déploiement terminé ==="
+echo "NOTE: Si vous avez modifié le schéma de la base de données,"
+echo "      suivez la procédure de l'Étape 10bis pour la migration."
 EOF
 
 chmod +x /opt/interclub/deploy.sh
